@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "id": "mine-drone",
+  "out": "/Users/xxx/my_pro/skills/skill-screen-picture/out/mine-drone",
+  "errors": [],
+  "warnings": [],
+  "screenshots": [
+    "/Users/xxx/my_pro/skills/skill-screen-picture/out/mine-drone/mine-drone-1920.png"
+  ],
+  "engine": "/Users/xxx/.bigscreen-ai/cache/bigscreen-engine",
+  "build": "Built 8 registered screens + Home (standalone) -> /Users/xxx/my_pro/skills/skill-screen-picture/out/mine-drone/.build",
+  "html": "/Users/xxx/my_pro/skills/skill-screen-picture/out/mine-drone/mine-drone.html",
+  "port": 5199,
+  "browser": "/Users/xxx/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "audit": {
+    "title": "矿山无人机智能巡检系统",
+    "stage": {
+      "w": 1920,
+      "h": 1080,
+      "scale": 1
+    },
+    "docScroll": [
+      1920,
+      1080
+    ],
+    "canvas": 0,
+    "renderer": null,
+    "drawCalls": null,
+    "overflow": [],
+    "emptyPanels": 0,
+    "bodyText": 1522
+  },
+  "report": "/Users/xxx/my_pro/skills/skill-screen-picture/out/mine-drone/mine-drone-report.json",
+  "generatedAt": "2026-10-28T05:42:57.517Z"
+}

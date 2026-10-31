@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>乐图智慧 · IoT 设备健康监控驾驶舱</title>
+<script src="../../../../industrial/vendor/vue.global.prod.js"></script>
+<script src="../../../../industrial/vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#02070b;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
+[v-cloak]{display:none}
+
+:root{
+  --bg:#071019;--s1:#0b1622;--s2:#0f1d2a;--s3:#132536;
+  --line:#20394a;--line-s:#31566d;
+  --accent:#36c2ff;--accent-s:rgba(54,194,255,.14);
+  --success:#35d07f;--warning:#ffb547;--danger:#ff5d5d;--offline:#708594;
+  --t1:#f2f7fa;--t2:#a8bac8;--t3:#708594;
+}
+
+/* ── 舞台 ── */
+#screen{
+  width:1920px;height:1080px;
+  position:absolute;left:50%;top:50%;transform-origin:center center;
+  display:grid;grid-template-rows:74px 1fr 42px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(54,194,255,.07),transparent 36%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.013) 0,rgba(255,255,255,.013) 1px,transparent 1px,transparent 4px),
+    linear-gradient(145deg,#091522 0%,#071019 54%,#050c13 100%);
+}
+#screen::after{
+  content:"";position:absolute;inset:74px 0 42px;pointer-events:none;
+  background-image:linear-gradient(rgba(54,194,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(54,194,255,.016) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 76%);
+}
+
+/* ── 顶栏 ── */
+.topbar{
+  position:relative;z-index:4;
+  display:grid;grid-template-columns:420px 1fr 520px;align-items:center;
+  padding:0 22px;border-bottom:1px solid var(--line);
+  background:rgba(5,13,21,.92);box-shadow:0 6px 24px rgba(0,0,0,.22);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{
+  width:40px;height:40px;border:1px solid var(--line-s);
+  display:grid;place-items:center;color:var(--accent);
+  border-radius:8px;background:linear-gradient(145deg,#132638,#09131d);
+}
+.brand-mark svg{width:22px;height:22px}
+.brand-copy strong{display:block;font-size:20px;letter-spacing:2px}
+.brand-copy span{font-size:15px;color:var(--t3);letter-spacing:1.5px}
+.title{text-align:center}
+.title h1{margin:0;font-size:34px;letter-spacing:4px;font-weight:700}
+.title p{margin:4px 0 0;color:var(--accent);font-size:14px;letter-spacing:5px}
+.head-right{display:flex;justify-content:flex-end;align-items:center;gap:14px}
+.filter-tabs{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:6px;background:#08121c}
+.filter-tabs button{
+  height:28px;padding:0 11px;border-radius:4px;font-size:16px;color:var(--t3);
+  transition:background .18s,color .18s;
+}
+.filter-tabs button.active{background:var(--accent-s);color:var(--t1);box-shadow:inset 0 0 0 1px rgba(54,194,255,.35)}
+.clock-box{text-align:right}
+.clock-box strong{display:block;font-size:24px;letter-spacing:1px}
+.clock-box span{font-size:15px;color:var(--t3)}
+
+/* ── 主体网格 ── */
+.main{
+  position:relative;z-index:2;min-height:0;
+  display:grid;grid-template-columns:358px 1fr 338px;
+  gap:12px;padding:12px 14px;
+}
+.col{min-height:0;display:grid;gap:12px}
+.col-l{grid-template-rows:1fr 246px}
+.col-c{grid-template-rows:1fr 230px}
+.col-r{grid-template-rows:226px 1fr 164px}
+
+/* ── 面板 ── */
+.panel{
+  position:relative;min-height:0;overflow:hidden;
+  border:1px solid var(--line);border-radius:8px;
+  background:linear-gradient(145deg,rgba(15,29,42,.94),rgba(8,18,28,.96));
+  box-shadow:inset 0 1px rgba(255,255,255,.035),0 10px 28px rgba(0,0,0,.18);
+}
+.panel::before{content:"";position:absolute;left:0;top:0;width:3px;height:44px;background:var(--accent)}
+.ph{
+  height:44px;padding:0 14px 0 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(49,86,109,.45);
+}
+.ph b{font-size:20px;font-weight:650;letter-spacing:.3px}
+.ph span{font-size:15px;color:var(--t3);padding:3px 7px;border:1px solid var(--line);border-radius:4px}
+.pb{padding:12px 14px;height:calc(100% - 44px);overflow:hidden}
+
+/* ── 健康矩阵 ── */
+.health-matrix{
+  display:grid;gap:8px;height:calc(100% - 8px);overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+}
+.matrix-group{}
+.group-label{
+  font-size:15px;color:var(--t3);letter-spacing:1px;
+  padding:4px 0 6px;border-bottom:1px solid var(--line);margin-bottom:6px;
+}
+.matrix-cells{display:flex;flex-wrap:wrap;gap:5px}
+.cell{
+  width:34px;height:34px;border-radius:5px;
+  display:grid;place-items:center;
+  font-size:13px;font-weight:600;letter-spacing:.3px;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;
+  border:1px solid transparent;position:relative;
+}
+.cell:hover{transform:scale(1.12);z-index:2}
+.cell.health-good{background:rgba(53,208,127,.18);border-color:rgba(53,208,127,.35);color:var(--success)}
+.cell.health-warn{background:rgba(255,181,71,.16);border-color:rgba(255,181,71,.32);color:var(--warning)}
+.cell.health-danger{background:rgba(255,93,93,.15);border-color:rgba(255,93,93,.3);color:var(--danger)}
+.cell.health-offline{background:rgba(112,133,148,.1);border-color:rgba(112,133,148,.22);color:var(--offline)}
+.cell.selected{box-shadow:0 0 0 2px var(--accent);z-index:3}
+.cell-tooltip{
+  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  white-space:nowrap;background:rgba(5,13,21,.96);border:1px solid var(--line-s);
+  border-radius:5px;padding:5px 8px;font-size:14px;color:var(--t1);
+  pointer-events:none;z-index:10;display:none;
+}
+.cell:hover .cell-tooltip{display:block}
+
+/* ── 风险排行 ── */
+.risk-list{display:flex;flex-direction:column;gap:7px}
+.risk-row{
+  display:grid;grid-template-columns:18px 1fr 52px 44px;align-items:center;
+  gap:9px;padding:8px 10px;
+  border:1px solid var(--line);border-radius:6px;
+  background:rgba(5,13,21,.42);
+}
+.risk-rank{
+  width:17px;height:17px;border-radius:4px;
+  display:grid;place-items:center;font-size:13px;font-weight:700;
+  background:rgba(255,255,255,.06);color:var(--t3);
+}
+.risk-rank.r1{background:rgba(255,93,93,.22);color:var(--danger)}
+.risk-rank.r2{background:rgba(255,181,71,.2);color:var(--warning)}
+.risk-rank.r3{background:rgba(255,181,71,.14);color:var(--warning)}
+.risk-row b{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.risk-row small{display:block;font-size:14px;color:var(--t3);margin-top:2px}
+.risk-score{text-align:right;font-size:18px;font-weight:600}
+.risk-badge{font-size:13px;padding:2px 6px;border-radius:3px;white-space:nowrap;text-align:center}
+.rb-danger{color:var(--danger);border:1px solid rgba(255,93,93,.3);background:rgba(255,93,93,.1)}
+.rb-warn{color:var(--warning);border:1px solid rgba(255,181,71,.3);background:rgba(255,181,71,.1)}
+.rb-ok{color:var(--success);border:1px solid rgba(53,208,127,.3);background:rgba(53,208,127,.08)}
+
+/* ── 设备详情卡 ── */
+.dev-detail{display:flex;flex-direction:column;gap:10px;height:calc(100% - 4px)}
+.dev-header{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 14px;border:1px solid rgba(54,194,255,.28);border-radius:7px;
+  background:linear-gradient(135deg,rgba(54,194,255,.09),rgba(54,194,255,.03));
+}
+.dev-icon{
+  width:52px;height:52px;border-radius:9px;
+  border:1px solid var(--line-s);background:var(--s3);
+  display:grid;place-items:center;flex-shrink:0;
+}
+.dev-icon svg{width:28px;height:28px;color:var(--accent)}
+.dev-meta strong{font-size:22px;display:block}
+.dev-meta p{margin:4px 0 0;font-size:15px;color:var(--t2)}
+.dev-meta-tags{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.tag{font-size:14px;padding:2px 7px;border-radius:3px;border:1px solid var(--line);color:var(--t3)}
+.tag.ok{color:var(--success);border-color:rgba(53,208,127,.3);background:rgba(53,208,127,.08)}
+.tag.warn{color:var(--warning);border-color:rgba(255,181,71,.3);background:rgba(255,181,71,.08)}
+.tag.off{color:var(--offline);border-color:rgba(112,133,148,.25)}
+
+/* 测点网格 */
+.point-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex-shrink:0}
+.point-card{
+  padding:9px 11px;border:1px solid var(--line);border-radius:7px;
+  background:rgba(5,13,21,.5);
+}
+.point-card.abnormal{border-color:rgba(255,181,71,.35);background:rgba(255,181,71,.07)}
+.pc-name{font-size:14px;color:var(--t3);margin-bottom:4px}
+.pc-val{font-size:24px;font-weight:700;line-height:1}
+.pc-val small{font-size:14px;color:var(--t2);font-weight:400;margin-left:3px}
+.pc-sub{font-size:14px;color:var(--t3);margin-top:4px}
+.pc-qual{display:inline-flex;align-items:center;gap:3px;font-size:13px}
+.qual-dot{width:5px;height:5px;border-radius:50%}
+
+/* SVG 设备结构图 */
+.dev-svg-wrap{flex:1;min-height:0;border:1px solid var(--line);border-radius:7px;background:rgba(5,13,21,.5);overflow:hidden}
+.dev-svg{width:100%;height:100%}
+
+/* ── 图表区 ── */
+.chart-wrap{height:calc(100% - 44px);padding:4px 8px 8px}
+.chart{width:100%;height:100%}
+
+/* ── 右栏 诊断/建议/工单 ── */
+.diagnosis-list{display:flex;flex-direction:column;gap:8px}
+.diag{
+  display:grid;grid-template-columns:8px 1fr;gap:10px;align-items:start;
+  padding:10px 10px;border:1px solid var(--line);border-radius:6px;
+  background:rgba(5,13,21,.42);
+}
+.diag i{width:6px;height:6px;margin-top:4px;border-radius:50%;background:var(--dc,var(--success))}
+.diag b{font-size:16px;display:block}
+.diag p{margin:3px 0 0;font-size:14px;color:var(--t3);line-height:1.5}
+.diag-confidence{font-size:13px;color:var(--t3);margin-top:5px}
+.diag-confidence span{color:var(--accent)}
+
+.suggest-list{display:flex;flex-direction:column;gap:7px}
+.suggest{
+  display:grid;grid-template-columns:22px 1fr;gap:9px;
+  padding:9px 10px;border-bottom:1px solid rgba(32,57,74,.65);
+}
+.suggest-num{
+  width:20px;height:20px;border-radius:50%;
+  display:grid;place-items:center;font-size:14px;font-weight:600;
+  background:var(--accent-s);color:var(--accent);
+}
+.suggest b{display:block;font-size:16px}
+.suggest span{font-size:14px;color:var(--t3)}
+
+.ticket-list{display:flex;flex-direction:column;gap:7px}
+.ticket{
+  padding:9px 11px;border:1px solid var(--line);border-radius:6px;
+  background:rgba(5,13,21,.42);
+}
+.ticket-head{display:flex;align-items:center;justify-content:space-between}
+.ticket-head b{font-size:16px}
+.ticket p{margin:4px 0 0;font-size:14px;color:var(--t3)}
+
+/* ── 状态栏 ── */
+.statusbar{
+  position:relative;z-index:4;
+  display:grid;grid-template-columns:420px 1fr 480px;align-items:center;
+  padding:0 18px;border-top:1px solid var(--line);
+  background:#050d15;font-size:16px;color:var(--t2);
+}
+.statusbar>div{display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 10px rgba(53,208,127,.6)}
+.sc{justify-content:center;color:var(--t3)}
+.sr{justify-content:flex-end}
+.ql{color:var(--success)}.sep{color:#284356}
+
+/* ── 动效 ── */
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM8 12l2 2 4-5"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <strong>乐图智慧</strong>
+        <span>LETU IoT DEVICE HEALTH</span>
+      </div>
+    </div>
+    <div class="title">
+      <h1>IoT 设备健康监控驾驶舱</h1>
+      <p>ASSET HEALTH · DIAGNOSTICS · ACTION</p>
+    </div>
+    <div class="head-right">
+      <div class="filter-tabs">
+        <button v-for="t in typeFilters" :key="t.id"
+          :class="{active: activeType===t.id}"
+          @click="activeType=t.id">{{ t.label }}</button>
+      </div>
+      <div class="clock-box num">
+        <strong>{{ clock }}</strong>
+        <span>演示数据 · 本地模拟</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主体 -->
+  <main class="main">
+
+    <!-- 左栏 -->
+    <section class="col col-l">
+
+      <!-- 设备健康矩阵 -->
+      <article class="panel">
+        <div class="ph">
+          <b>设备健康矩阵</b>
+          <span>{{ filteredTotal }} 台设备 · {{ filteredOnline }} 在线</span>
+        </div>
+        <div class="pb" style="padding:10px 12px">
+          <div class="health-matrix">
+            <div v-for="group in matrixGroups" :key="group.name" class="matrix-group">
+              <div class="group-label">{{ group.name }}</div>
+              <div class="matrix-cells">
+                <div
+                  v-for="d in group.devices"
+                  :key="d.id"
+                  class="cell"
+                  :class="['health-'+d.health, selectedId===d.id?'selected':'']"
+                  @click="selectDevice(d)"
+                  :aria-label="d.name"
+                >
+                  <span>{{ d.score }}</span>
+                  <div class="cell-tooltip">{{ d.name }}<br/>健康 {{ d.score }} · {{ d.stateLabel }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 风险排行 -->
+      <article class="panel">
+        <div class="ph"><b>风险设备排行</b><span>按健康分升序</span></div>
+        <div class="pb" style="padding:10px 12px">
+          <div class="risk-list">
+            <div v-for="(d,i) in topRisk" :key="d.id" class="risk-row" @click="selectDevice(d)" style="cursor:pointer">
+              <div class="risk-rank" :class="'r'+(i+1)">{{ i+1 }}</div>
+              <div>
+                <b>{{ d.name }}</b>
+                <small>{{ d.project }} · {{ d.typeLabel }}</small>
+              </div>
+              <div class="risk-score num" :style="{color: d.health==='danger'?'var(--danger)':d.health==='warn'?'var(--warning)':'var(--offline)'}">
+                {{ d.score }}
+              </div>
+              <span class="risk-badge" :class="d.health==='danger'?'rb-danger':d.health==='warn'?'rb-warn':'rb-ok'">
+                {{ d.stateLabel }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- 中栏 -->
+    <section class="col col-c">
+
+      <!-- 设备详情 -->
+      <article class="panel">
+        <div class="ph">
+          <b>{{ selectedDev.name }} · 实时测点</b>
+          <span>{{ selectedDev.typeLabel }} · {{ selectedDev.project }}</span>
+        </div>
+        <div class="pb" style="padding:10px 14px;display:flex;flex-direction:column;gap:10px">
+
+          <!-- 设备头部 -->
+          <div class="dev-header">
+            <div class="dev-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path v-if="selectedDev.type==='monitor'" d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+                <path v-else-if="selectedDev.type==='meter'" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 6v6l4 2"/>
+                <path v-else d="M12 2a5 5 0 0 1 5 5v6a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5zm-8 9h2m12 0h2M8 21l4-4 4 4"/>
+              </svg>
+            </div>
+            <div class="dev-meta" style="flex:1">
+              <strong>{{ selectedDev.name }}</strong>
+              <p>设备编号 {{ selectedDev.id }} · 接入时间 {{ selectedDev.since }}</p>
+              <div class="dev-meta-tags">
+                <span class="tag" :class="selectedDev.health==='good'?'ok':selectedDev.health==='warn'?'warn':selectedDev.health==='offline'?'off':''">
+                  {{ selectedDev.stateLabel }}
+                </span>
+                <span class="tag">{{ selectedDev.typeLabel }}</span>
+                <span class="tag">{{ selectedDev.protocol }}</span>
+                <span class="tag">健康分 {{ selectedDev.score }}</span>
+              </div>
+            </div>
+            <!-- 健康圆环 -->
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(54,194,255,.1)" stroke-width="7"/>
+              <circle cx="36" cy="36" r="28" fill="none"
+                :stroke="selectedDev.health==='good'?'#35d07f':selectedDev.health==='warn'?'#ffb547':'#ff5d5d'"
+                stroke-width="7" stroke-linecap="round"
+                :stroke-dasharray="(selectedDev.score/100)*175.9+' 175.9'"
+                stroke-dashoffset="43.98" transform="rotate(-90 36 36)"/>
+              <text x="36" y="39" text-anchor="middle" fill="#f2f7fa" font-size="22" font-weight="700" font-family="Bahnschrift,sans-serif">{{ selectedDev.score }}</text>
+              <text x="36" y="52" text-anchor="middle" fill="#708594" font-size="13">健康分</text>
+            </svg>
+          </div>
+
+          <!-- 测点网格 -->
+          <div class="point-grid">
+            <div v-for="pt in selectedDev.points" :key="pt.name"
+              class="point-card" :class="{abnormal: pt.abnormal}">
+              <div class="pc-name">{{ pt.name }}</div>
+              <div class="pc-val num" :style="{color: pt.abnormal?'var(--warning)':'var(--t1)'}">
+                {{ pt.value }}<small>{{ pt.unit }}</small>
+              </div>
+              <div class="pc-sub">
+                <span class="pc-qual">
+                  <i class="qual-dot" :style="{background: pt.quality==='GOOD'?'var(--success)':pt.quality==='UNCERTAIN'?'var(--warning)':'var(--offline)'}"></i>
+                  {{ pt.quality }}
+                </span>
+                <span style="margin-left:6px;font-size:13px;color:var(--t3)">{{ pt.ts }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 设备结构 SVG -->
+          <div class="dev-svg-wrap" style="flex:1;min-height:0">
+            <svg class="dev-svg" viewBox="0 0 780 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+              <!-- 在线监测仪结构 -->
+              <template v-if="selectedDev.type==='monitor'">
+                <!-- 主机箱 -->
+                <rect x="60" y="30" width="180" height="140" rx="8" fill="#0d1d2a" stroke="#31566d" stroke-width="1.5"/>
+                <rect x="72" y="42" width="156" height="90" rx="5" fill="#091622" stroke="#20394a"/>
+                <!-- 屏幕扫描线 -->
+                <rect x="72" y="42" width="156" height="8" rx="2" fill="rgba(54,194,255,.1)" style="animation:scanline 3s linear infinite;transform-box:fill-box;transform-origin:center"/>
+                <text x="150" y="76" text-anchor="middle" fill="#36c2ff" font-size="15" font-family="Bahnschrift,sans-serif">LETU-MON-V3</text>
+                <text x="150" y="95" text-anchor="middle" fill="#a8bac8" font-size="13">在线监测仪</text>
+                <text x="150" y="114" text-anchor="middle" fill="#f2f7fa" font-size="18" font-weight="700" font-family="Bahnschrift,sans-serif">{{ selectedDev.points[0]?selectedDev.points[0].value:'--' }}</text>
+                <text x="150" y="127" text-anchor="middle" fill="#708594" font-size="13">{{ selectedDev.points[0]?selectedDev.points[0].unit:'' }}</text>
+                <!-- 电源/通信指示灯 -->
+                <circle cx="88" cy="158" r="5" :fill="selectedDev.health!=='offline'?'#35d07f':'#708594'" :style="selectedDev.health!=='offline'?'filter:drop-shadow(0 0 4px #35d07f)':''"/>
+                <circle cx="104" cy="158" r="5" fill="#36c2ff" style="filter:drop-shadow(0 0 4px #36c2ff);animation:pulse 1.4s ease-in-out infinite"/>
+                <circle cx="120" cy="158" r="5" fill="#ffb547" :style="selectedDev.health==='warn'?'filter:drop-shadow(0 0 4px #ffb547)':''"/>
+                <text x="88" y="172" text-anchor="middle" fill="#708594" font-size="11">电源</text>
+                <text x="104" y="172" text-anchor="middle" fill="#708594" font-size="11">通信</text>
+                <text x="120" y="172" text-anchor="middle" fill="#708594" font-size="11">告警</text>
+                <!-- 传感器探头 -->
+                <line x1="300" y1="100" x2="244" y2="100" stroke="#31566d" stroke-width="2" stroke-dasharray="5 4"/>
+                <rect x="300" y="60" width="60" height="80" rx="6" fill="#0d1d2a" stroke="#31566d" stroke-width="1.5"/>
+                <rect x="310" y="72" width="40" height="12" rx="3" fill="#132536"/>
+                <rect x="310" y="90" width="40" height="12" rx="3" fill="#132536"/>
+                <rect x="310" y="108" width="40" height="12" rx="3" fill="#132536"/>
+                <text x="330" y="152" text-anchor="middle" fill="#708594" font-size="13">传感器组</text>
+                <!-- 测点标注 -->
+                <g v-for="(pt,i) in selectedDev.points.slice(0,3)" :key="pt.name">
+                  <line :x1="390" :y1="58+i*40" :x2="500" :y2="58+i*40" stroke="#20394a" stroke-width="1"/>
+                  <rect :x="500" :y="46+i*40" width="150" height="28" rx="4" fill="#0b1824" stroke="#31566d" stroke-width="1"/>
+                  <text :x="575" :y="57+i*40" text-anchor="middle" fill="#708594" font-size="13">{{ pt.name }}</text>
+                  <text :x="575" :y="70+i*40" text-anchor="middle" font-size="17" font-weight="700" font-family="Bahnschrift,sans-serif" :fill="pt.abnormal?'#ffb547':'#f2f7fa'">{{ pt.value }} <tspan font-size="13" fill="#a8bac8" font-weight="400">{{ pt.unit }}</tspan></text>
+                  <circle :cx="392" :cy="58+i*40" r="3" :fill="pt.abnormal?'#ffb547':'#35d07f'"/>
+                </g>
+              </template>
+
+              <!-- 远传水表结构 -->
+              <template v-else-if="selectedDev.type==='meter'">
+                <rect x="60" y="40" width="160" height="120" rx="30" fill="#0d1d2a" stroke="#31566d" stroke-width="1.5"/>
+                <circle cx="140" cy="100" r="42" fill="#091622" stroke="#20394a" stroke-width="1"/>
+                <circle cx="140" cy="100" r="32" fill="none" stroke="rgba(54,194,255,.15)" stroke-width="5"/>
+                <circle cx="140" cy="100" r="32" fill="none" stroke="#36c2ff" stroke-width="5" stroke-linecap="round"
+                  :stroke-dasharray="(selectedDev.score/100)*201.1+' 201.1'" stroke-dashoffset="50.3" transform="rotate(-90 140 100)"/>
+                <text x="140" y="95" text-anchor="middle" fill="#f2f7fa" font-size="20" font-weight="700" font-family="Bahnschrift,sans-serif">{{ selectedDev.points[0]?selectedDev.points[0].value:'--' }}</text>
+                <text x="140" y="110" text-anchor="middle" fill="#708594" font-size="13">{{ selectedDev.points[0]?selectedDev.points[0].unit:'m³/h' }}</text>
+                <text x="140" y="174" text-anchor="middle" fill="#a8bac8" font-size="14">远传水表 · NB-IoT</text>
+                <!-- 天线 -->
+                <path d="M225 60 Q260 40 295 60" fill="none" stroke="#36c2ff" stroke-width="1.5" stroke-dasharray="4 3" opacity=".7"/>
+                <path d="M225 75 Q260 52 295 75" fill="none" stroke="#36c2ff" stroke-width="1" stroke-dasharray="4 3" opacity=".45"/>
+                <circle cx="295" cy="68" r="4" fill="#36c2ff" style="filter:drop-shadow(0 0 5px #36c2ff);animation:pulse 1.6s ease-in-out infinite"/>
+                <text x="310" y="72" fill="#a8bac8" font-size="13">NB-IoT</text>
+                <!-- 测点标注 -->
+                <g v-for="(pt,i) in selectedDev.points.slice(0,3)" :key="pt.name">
+                  <line :x1="400" :y1="58+i*40" :x2="500" :y2="58+i*40" stroke="#20394a" stroke-width="1"/>
+                  <rect :x="500" :y="46+i*40" width="150" height="28" rx="4" fill="#0b1824" stroke="#31566d"/>
+                  <text :x="575" :y="57+i*40" text-anchor="middle" fill="#708594" font-size="13">{{ pt.name }}</text>
+                  <text :x="575" :y="70+i*40" text-anchor="middle" font-size="17" font-weight="700" font-family="Bahnschrift,sans-serif" :fill="pt.abnormal?'#ffb547':'#f2f7fa'">{{ pt.value }} <tspan font-size="13" fill="#a8bac8" font-weight="400">{{ pt.unit }}</tspan></text>
+                  <circle :cx="402" :cy="58+i*40" r="3" :fill="pt.abnormal?'#ffb547':'#35d07f'"/>
+                </g>
+              </template>
+
+              <!-- 泵站控制器结构 -->
+              <template v-else>
+                <!-- 控制柜 -->
+                <rect x="40" y="20" width="200" height="160" rx="6" fill="#0d1d2a" stroke="#31566d" stroke-width="1.5"/>
+                <rect x="50" y="30" width="180" height="60" rx="4" fill="#091622" stroke="#20394a"/>
+                <!-- PLC 模块 -->
+                <rect x="58" y="38" width="40" height="44" rx="3" fill="#0f2030" stroke="#31566d"/>
+                <text x="78" y="56" text-anchor="middle" fill="#36c2ff" font-size="11">PLC</text>
+                <text x="78" y="68" text-anchor="middle" fill="#a8bac8" font-size="11">S7-1200</text>
+                <rect x="68" y="72" width="5" height="5" rx="1" fill="#35d07f"/>
+                <rect x="75" y="72" width="5" height="5" rx="1" fill="#36c2ff" style="animation:pulse 1.4s ease-in-out infinite"/>
+                <!-- I/O 模块 -->
+                <rect x="104" y="38" width="36" height="44" rx="3" fill="#0f2030" stroke="#31566d"/>
+                <text x="122" y="56" text-anchor="middle" fill="#a8bac8" font-size="11">I/O</text>
+                <line x1="110" y1="64" x2="134" y2="64" stroke="#31566d" stroke-width="1"/>
+                <g v-for="j in 5" :key="j">
+                  <rect :x="108+j*4" y="67" width="3" height="8" rx="1" :fill="j<=3?'#35d07f':'#20394a'"/>
+                </g>
+                <!-- 频率显示 -->
+                <rect x="50" y="100" width="180" height="36" rx="4" fill="#091622" stroke="#20394a"/>
+                <text x="80" y="124" text-anchor="middle" fill="#708594" font-size="13">运行频率</text>
+                <text x="80" y="113" text-anchor="middle" fill="#36c2ff" font-size="15" font-weight="700" font-family="Bahnschrift,sans-serif">Hz</text>
+                <text x="170" y="122" text-anchor="middle" fill="#f2f7fa" font-size="24" font-weight="700" font-family="Bahnschrift,sans-serif">{{ selectedDev.points[1]?selectedDev.points[1].value:'--' }}</text>
+                <text x="140" y="170" text-anchor="middle" fill="#a8bac8" font-size="13">泵站控制器 · Modbus TCP</text>
+                <!-- 测点标注 -->
+                <g v-for="(pt,i) in selectedDev.points.slice(0,3)" :key="pt.name">
+                  <line :x1="300" :y1="58+i*40" :x2="500" :y2="58+i*40" stroke="#20394a" stroke-width="1"/>
+                  <rect :x="500" :y="46+i*40" width="150" height="28" rx="4" fill="#0b1824" stroke="#31566d"/>
+                  <text :x="575" :y="57+i*40" text-anchor="middle" fill="#708594" font-size="13">{{ pt.name }}</text>
+                  <text :x="575" :y="70+i*40" text-anchor="middle" font-size="17" font-weight="700" font-family="Bahnschrift,sans-serif" :fill="pt.abnormal?'#ffb547':'#f2f7fa'">{{ pt.value }} <tspan font-size="13" fill="#a8bac8" font-weight="400">{{ pt.unit }}</tspan></text>
+                  <circle :cx="302" :cy="58+i*40" r="3" :fill="pt.abnormal?'#ffb547':'#35d07f'"/>
+                </g>
+              </template>
+
+              <!-- 时间戳 -->
+              <text x="390" y="190" fill="#708594" font-size="13">采样时间 {{ selectedDev.points[0]?selectedDev.points[0].ts:'--' }} · 数据质量 {{ selectedDev.points[0]?selectedDev.points[0].quality:'--' }}</text>
+            </svg>
+          </div>
+
+        </div>
+      </article>
+
+      <!-- 退化趋势图 -->
+      <article class="panel">
+        <div class="ph">
+          <b>{{ selectedDev.name }} · 健康趋势</b>
+          <span>近 24h · 信号强度 / 上报间隔 / 电池</span>
+        </div>
+        <div class="chart-wrap"><div id="trendChart" class="chart"></div></div>
+      </article>
+
+    </section>
+
+    <!-- 右栏 -->
+    <section class="col col-r">
+
+      <!-- 诊断证据 -->
+      <article class="panel">
+        <div class="ph"><b>诊断证据</b><span>自动分析</span></div>
+        <div class="pb" style="padding:10px 12px">
+          <div class="diagnosis-list">
+            <div v-for="d in selectedDev.diagnosis" :key="d.text" class="diag" :style="{'--dc': d.level==='warn'?'var(--warning)':d.level==='danger'?'var(--danger)':'var(--success)'}">
+              <i></i>
+              <div>
+                <b>{{ d.title }}</b>
+                <p>{{ d.text }}</p>
+                <div class="diag-confidence">置信度 <span>{{ d.conf }}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- AI 建议 -->
+      <article class="panel">
+        <div class="ph"><b>处置建议</b><span>{{ selectedDev.name }}</span></div>
+        <div class="pb" style="padding:10px 12px">
+          <div class="suggest-list">
+            <div v-for="(s,i) in selectedDev.suggestions" :key="i" class="suggest">
+              <div class="suggest-num">{{ i+1 }}</div>
+              <div>
+                <b>{{ s.title }}</b>
+                <span>{{ s.desc }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 工单 / 待办 -->
+      <article class="panel">
+        <div class="ph"><b>工单 / 待办</b><span>{{ tickets.length }} 条</span></div>
+        <div class="pb" style="padding:10px 12px">
+          <div class="ticket-list">
+            <div v-for="t in tickets" :key="t.id" class="ticket">
+              <div class="ticket-head">
+                <b>{{ t.title }}</b>
+                <span class="risk-badge" :class="t.level==='danger'?'rb-danger':t.level==='warn'?'rb-warn':'rb-ok'">
+                  {{ t.status }}
+                </span>
+              </div>
+              <p>{{ t.desc }}</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+  </main>
+
+  <!-- 状态栏 -->
+  <footer class="statusbar">
+    <div>
+      <span class="live-dot"></span>
+      <span>{{ filteredOnline }} / {{ filteredTotal }} 台设备在线</span>
+      <span class="sep">|</span>
+      <span>{{ dangerCount }} 台危险 · {{ warnCount }} 台预警</span>
+    </div>
+    <div class="sc">数据来源：第三方 API 定时同步 · 采样周期 5 min · 演示数据</div>
+    <div class="sr">
+      <span class="ql">数据质量 GOOD</span>
+      <span class="sep">|</span>
+      <span>更新时间 {{ clock }}</span>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ── 演示数据 ─────────────────────────────────────────────────────────────
+// 三类设备：在线监测仪 / 远传水表 / 泵站控制器
+// 健康分 0-100，工况固定不随机
+const ALL_DEVICES = [
+  // === 华清水务 · 北区污水厂 ===
+  { id:'MON-HQ-01', name:'COD在线监测仪1#', type:'monitor', typeLabel:'在线监测仪', project:'华清·北区', health:'good',  score:92, stateLabel:'正常', since:'2024-03',protocol:'MQTT',
+    points:[{name:'COD',value:'38.2',unit:'mg/L',quality:'GOOD',ts:'18:52',abnormal:false},{name:'氨氮',value:'3.1',unit:'mg/L',quality:'GOOD',ts:'18:52',abnormal:false},{name:'信号强度',value:'-68',unit:'dBm',quality:'GOOD',ts:'18:52',abnormal:false},{name:'电池电量',value:'86',unit:'%',quality:'GOOD',ts:'18:52',abnormal:false},{name:'上报间隔',value:'300',unit:'s',quality:'GOOD',ts:'18:52',abnormal:false},{name:'在线时长',value:'47',unit:'天',quality:'GOOD',ts:'18:52',abnormal:false}],
+    diagnosis:[{title:'设备运行正常',text:'所有测点数据质量 GOOD，上报间隔稳定，无异常漂移',level:'ok',conf:'97%'},{title:'COD 达标',text:'当前 38.2 mg/L，低于限值 50 mg/L，达标裕量充足',level:'ok',conf:'99%'}],
+    suggestions:[{title:'维持当前采样频率 300s',desc:'负载适中，无需调整'},{title:'下次标定计划 2026-11-15',desc:'距上次标定 87 天，建议按计划执行'}],
+  },
+  { id:'MON-HQ-02', name:'TP在线监测仪2#', type:'monitor', typeLabel:'在线监测仪', project:'华清·北区', health:'warn', score:61, stateLabel:'预警', since:'2024-05',protocol:'MQTT',
+    points:[{name:'TP',value:'0.38',unit:'mg/L',quality:'UNCERTAIN',ts:'18:48',abnormal:true},{name:'氨氮',value:'3.6',unit:'mg/L',quality:'GOOD',ts:'18:48',abnormal:false},{name:'信号强度',value:'-82',unit:'dBm',quality:'UNCERTAIN',ts:'18:48',abnormal:true},{name:'电池电量',value:'31',unit:'%',quality:'GOOD',ts:'18:48',abnormal:true},{name:'上报间隔',value:'480',unit:'s',quality:'UNCERTAIN',ts:'18:48',abnormal:true},{name:'在线时长',value:'12',unit:'天',quality:'GOOD',ts:'18:48',abnormal:false}],
+    diagnosis:[{title:'信号强度偏低',text:'当前 -82 dBm，低于阈值 -75 dBm，可能影响数据稳定性',level:'warn',conf:'88%'},{title:'电池电量不足',text:'剩余 31%，预计 15 天后耗尽，建议尽快更换',level:'warn',conf:'95%'},{title:'上报间隔延长',text:'由 300s 变为 480s，与信号弱相关',level:'warn',conf:'82%'}],
+    suggestions:[{title:'现场检查天线安装位置',desc:'信号弱可能因遮挡或接触不良'},{title:'安排电池更换（优先级高）',desc:'15 天内耗尽，建议本周处理'},{title:'TP 出水关注',desc:'0.38 mg/L 接近限值 0.4，排查除磷投药量'}],
+  },
+  { id:'MON-HQ-03', name:'流量计3#',        type:'monitor', typeLabel:'在线监测仪', project:'华清·北区', health:'good',  score:88, stateLabel:'正常', since:'2024-01',protocol:'MQTT',
+    points:[{name:'进水流量',value:'1060',unit:'m³/h',quality:'GOOD',ts:'18:52',abnormal:false},{name:'累计流量',value:'20,400',unit:'m³',quality:'GOOD',ts:'18:52',abnormal:false},{name:'信号强度',value:'-64',unit:'dBm',quality:'GOOD',ts:'18:52',abnormal:false},{name:'电池电量',value:'72',unit:'%',quality:'GOOD',ts:'18:52',abnormal:false},{name:'上报间隔',value:'300',unit:'s',quality:'GOOD',ts:'18:52',abnormal:false},{name:'在线时长',value:'62',unit:'天',quality:'GOOD',ts:'18:52',abnormal:false}],
+    diagnosis:[{title:'流量计运行正常',text:'数据质量 GOOD，累计计量无异常跳变',level:'ok',conf:'96%'}],
+    suggestions:[{title:'维持当前配置',desc:'无需操作'},{title:'下次巡检 2026-11-20',desc:'按周期例行检查'}],
+  },
+  { id:'MTR-HQ-01', name:'北区1#远传水表',  type:'meter', typeLabel:'远传水表', project:'华清·北区', health:'good',  score:91, stateLabel:'正常', since:'2023-11',protocol:'NB-IoT',
+    points:[{name:'流量',value:'42.6',unit:'m³/h',quality:'GOOD',ts:'18:50',abnormal:false},{name:'累计用量',value:'1,824',unit:'m³',quality:'GOOD',ts:'18:50',abnormal:false},{name:'信号强度',value:'-71',unit:'dBm',quality:'GOOD',ts:'18:50',abnormal:false},{name:'电池电量',value:'68',unit:'%',quality:'GOOD',ts:'18:50',abnormal:false},{name:'上报间隔',value:'3600',unit:'s',quality:'GOOD',ts:'18:50',abnormal:false},{name:'在线时长',value:'108',unit:'天',quality:'GOOD',ts:'18:50',abnormal:false}],
+    diagnosis:[{title:'远传水表运行正常',text:'NB-IoT 信号良好，电池剩余 68%，预计续航 8 个月',level:'ok',conf:'94%'}],
+    suggestions:[{title:'维持当前上报频率 1h',desc:'用量平稳，无需提高频率'},{title:'计划换电池 2027-06',desc:'预计届时剩余约 20%'}],
+  },
+  { id:'MTR-HQ-02', name:'北区2#远传水表',  type:'meter', typeLabel:'远传水表', project:'华清·北区', health:'offline',score:12, stateLabel:'离线', since:'2024-02',protocol:'NB-IoT',
+    points:[{name:'流量',value:'--',unit:'m³/h',quality:'BAD',ts:'16:20',abnormal:true},{name:'累计用量',value:'--',unit:'m³',quality:'BAD',ts:'16:20',abnormal:true},{name:'信号强度',value:'--',unit:'dBm',quality:'BAD',ts:'16:20',abnormal:true},{name:'电池电量',value:'--',unit:'%',quality:'BAD',ts:'16:20',abnormal:true},{name:'上报间隔',value:'--',unit:'s',quality:'BAD',ts:'16:20',abnormal:true},{name:'最后在线',value:'16:20',unit:'',quality:'BAD',ts:'16:20',abnormal:true}],
+    diagnosis:[{title:'设备离线 2h+',text:'最后上报时间 16:20，已超过 2 小时未通信，可能断电或天线脱落',level:'danger',conf:'91%'},{title:'历史信号持续下降',text:'近 7 天信号从 -74 降至 -89 dBm，本次离线可能是信号彻底中断',level:'warn',conf:'79%'}],
+    suggestions:[{title:'立即派人现场排查',desc:'优先确认设备供电与天线状态'},{title:'检查 NB-IoT 基站状态',desc:'确认是否区域网络问题'},{title:'临时补录数据',desc:'离线期间计量数据需人工补录'}],
+  },
+  { id:'PMP-HQ-01', name:'1#进水提升泵控',  type:'pump', typeLabel:'泵站控制器', project:'华清·北区', health:'good',  score:85, stateLabel:'正常', since:'2023-08',protocol:'Modbus TCP',
+    points:[{name:'运行状态',value:'运行',unit:'',quality:'GOOD',ts:'18:52',abnormal:false},{name:'运行频率',value:'38.5',unit:'Hz',quality:'GOOD',ts:'18:52',abnormal:false},{name:'电流',value:'24.6',unit:'A',quality:'GOOD',ts:'18:52',abnormal:false},{name:'电压',value:'380',unit:'V',quality:'GOOD',ts:'18:52',abnormal:false},{name:'累计运行',value:'4,820',unit:'h',quality:'GOOD',ts:'18:52',abnormal:false},{name:'故障次数',value:'2',unit:'次/月',quality:'GOOD',ts:'18:52',abnormal:false}],
+    diagnosis:[{title:'泵控运行正常',text:'电流、电压在额定范围内，频率稳定，无异常跳闸',level:'ok',conf:'93%'},{title:'累计运行时长关注',text:'4820h，建议 5000h 时安排大修预检',level:'ok',conf:'88%'}],
+    suggestions:[{title:'维持当前频率 38.5 Hz',desc:'进水流量匹配，不建议调节'},{title:'5000h 预检计划',desc:'还剩约 180h，建议提前备件'}],
+  },
+  { id:'PMP-HQ-02', name:'2#回流污泥泵控',  type:'pump', typeLabel:'泵站控制器', project:'华清·北区', health:'warn', score:55, stateLabel:'预警', since:'2023-08',protocol:'Modbus TCP',
+    points:[{name:'运行状态',value:'运行',unit:'',quality:'GOOD',ts:'18:52',abnormal:false},{name:'运行频率',value:'42.0',unit:'Hz',quality:'GOOD',ts:'18:52',abnormal:false},{name:'电流',value:'31.2',unit:'A',quality:'UNCERTAIN',ts:'18:52',abnormal:true},{name:'电压',value:'376',unit:'V',quality:'GOOD',ts:'18:52',abnormal:false},{name:'累计运行',value:'6,240',unit:'h',quality:'GOOD',ts:'18:52',abnormal:false},{name:'故障次数',value:'5',unit:'次/月',quality:'UNCERTAIN',ts:'18:52',abnormal:true}],
+    diagnosis:[{title:'电流偏高 31.2A',text:'额定 28A，超额定 11%，可能叶轮磨损或管道阻力增大',level:'warn',conf:'84%'},{title:'故障次数上升',text:'本月 5 次故障跳闸，较上月 1 次显著增加',level:'warn',conf:'91%'},{title:'累计运行 6240h',text:'已超过建议大修周期 6000h',level:'warn',conf:'96%'}],
+    suggestions:[{title:'安排大修（紧急）',desc:'累计运行超 6000h，结合电流偏高建议本周安排'},{title:'检查叶轮与轴承',desc:'过载电流常见原因：叶轮磨损、轴承间隙过大'},{title:'降频运行临时缓解',desc:'将频率从 42Hz 降至 38Hz，观察电流变化'}],
+  },
+
+  // === 启润环保 · 南区工厂 ===
+  { id:'MON-QR-01', name:'出水COD仪1#',     type:'monitor', typeLabel:'在线监测仪', project:'启润·南区', health:'good',  score:90, stateLabel:'正常', since:'2024-06',protocol:'MQTT',
+    points:[{name:'COD',value:'42.1',unit:'mg/L',quality:'GOOD',ts:'18:50',abnormal:false},{name:'悬浮物',value:'8.4',unit:'mg/L',quality:'GOOD',ts:'18:50',abnormal:false},{name:'信号强度',value:'-66',unit:'dBm',quality:'GOOD',ts:'18:50',abnormal:false},{name:'电池电量',value:'79',unit:'%',quality:'GOOD',ts:'18:50',abnormal:false},{name:'上报间隔',value:'300',unit:'s',quality:'GOOD',ts:'18:50',abnormal:false},{name:'在线时长',value:'35',unit:'天',quality:'GOOD',ts:'18:50',abnormal:false}],
+    diagnosis:[{title:'运行正常',text:'COD 42.1 mg/L，达标裕量充足，数据质量稳定',level:'ok',conf:'96%'}],
+    suggestions:[{title:'无需操作','desc':'设备状态良好'}],
+  },
+  { id:'MTR-QR-01', name:'生产线1#水表',    type:'meter', typeLabel:'远传水表', project:'启润·南区', health:'good',  score:87, stateLabel:'正常', since:'2024-03',protocol:'NB-IoT',
+    points:[{name:'流量',value:'18.4',unit:'m³/h',quality:'GOOD',ts:'18:50',abnormal:false},{name:'累计用量',value:'824',unit:'m³',quality:'GOOD',ts:'18:50',abnormal:false},{name:'信号强度',value:'-69',unit:'dBm',quality:'GOOD',ts:'18:50',abnormal:false},{name:'电池电量',value:'82',unit:'%',quality:'GOOD',ts:'18:50',abnormal:false},{name:'上报间隔',value:'3600',unit:'s',quality:'GOOD',ts:'18:50',abnormal:false},{name:'在线时长',value:'62',unit:'天',quality:'GOOD',ts:'18:50',abnormal:false}],
+    diagnosis:[{title:'运行正常',text:'NB-IoT 信号稳定，电池充足',level:'ok',conf:'95%'}],
+    suggestions:[{title:'无需操作','desc':'设备状态良好'}],
+  },
+  { id:'PMP-QR-01', name:'原水泵站控制器',   type:'pump', typeLabel:'泵站控制器', project:'启润·南区', health:'danger',score:28, stateLabel:'危险', since:'2023-12',protocol:'Modbus TCP',
+    points:[{name:'运行状态',value:'故障',unit:'',quality:'BAD',ts:'17:38',abnormal:true},{name:'运行频率',value:'0',unit:'Hz',quality:'BAD',ts:'17:38',abnormal:true},{name:'电流',value:'0',unit:'A',quality:'BAD',ts:'17:38',abnormal:true},{name:'电压',value:'0',unit:'V',quality:'BAD',ts:'17:38',abnormal:true},{name:'累计运行',value:'3,100',unit:'h',quality:'GOOD',ts:'17:38',abnormal:false},{name:'故障代码',value:'E-07',unit:'',quality:'BAD',ts:'17:38',abnormal:true}],
+    diagnosis:[{title:'过热保护跳闸 E-07',text:'17:38 触发过热故障，变频器温度超过 85°C 保护值停机',level:'danger',conf:'98%'},{title:'散热模块疑似堵塞',text:'近 3 天运行温度持续上升，散热风扇可能故障或风道堵塞',level:'danger',conf:'86%'}],
+    suggestions:[{title:'立即现场排查散热系统',desc:'检查变频器散热风扇、风道过滤网是否堵塞'},{title:'确认恢复前完成故障复位',desc:'清除 E-07 故障码后观察是否复发'},{title:'备用泵启动',desc:'原水泵停机期间启用备用泵维持生产'}],
+  },
+
+  // === 盛和市政 · 泵站群 ===
+  { id:'PMP-SH-01', name:'1#主泵控制器',     type:'pump', typeLabel:'泵站控制器', project:'盛和·泵站', health:'good',  score:94, stateLabel:'正常', since:'2024-01',protocol:'Modbus TCP',
+    points:[{name:'运行状态',value:'运行',unit:'',quality:'GOOD',ts:'18:52',abnormal:false},{name:'运行频率',value:'45.2',unit:'Hz',quality:'GOOD',ts:'18:52',abnormal:false},{name:'电流',value:'18.4',unit:'A',quality:'GOOD',ts:'18:52',abnormal:false},{name:'电压',value:'381',unit:'V',quality:'GOOD',ts:'18:52',abnormal:false},{name:'累计运行',value:'2,180',unit:'h',quality:'GOOD',ts:'18:52',abnormal:false},{name:'故障次数',value:'0',unit:'次/月',quality:'GOOD',ts:'18:52',abnormal:false}],
+    diagnosis:[{title:'泵站运行优良',text:'电流电压正常，无故障记录，维护良好',level:'ok',conf:'98%'}],
+    suggestions:[{title:'维持当前运行策略','desc':'一切正常'}],
+  },
+  { id:'MTR-SH-01', name:'泵站出口水表',     type:'meter', typeLabel:'远传水表', project:'盛和·泵站', health:'warn', score:64, stateLabel:'预警', since:'2023-10',protocol:'NB-IoT',
+    points:[{name:'流量',value:'62.3',unit:'m³/h',quality:'UNCERTAIN',ts:'18:40',abnormal:false},{name:'累计用量',value:'4,210',unit:'m³',quality:'GOOD',ts:'18:40',abnormal:false},{name:'信号强度',value:'-84',unit:'dBm',quality:'UNCERTAIN',ts:'18:40',abnormal:true},{name:'电池电量',value:'24',unit:'%',quality:'GOOD',ts:'18:40',abnormal:true},{name:'上报间隔',value:'7200',unit:'s',quality:'UNCERTAIN',ts:'18:40',abnormal:true},{name:'在线时长',value:'5',unit:'天',quality:'GOOD',ts:'18:40',abnormal:false}],
+    diagnosis:[{title:'电池电量低 24%',text:'预计 10 天内耗尽，上报间隔已自动延长至 7200s',level:'warn',conf:'94%'},{title:'信号强度不稳定',text:'-84 dBm 处于临界值，信号衰减可能加剧电池消耗',level:'warn',conf:'78%'}],
+    suggestions:[{title:'本周安排电池更换',desc:'剩余 24%，不建议拖延'},{title:'检查天线朝向与基站距离',desc:'改善信号后可恢复正常上报间隔'}],
+  },
+];
+
+// 趋势数据（工况固定）
+const TREND_DATA = {
+  good:    { signal:[-68,-67,-68,-66,-68,-67,-68,-66,-67,-68,-66,-68], battery:[92,91,91,90,90,89,89,88,88,87,87,86], interval:[300,300,300,300,300,300,300,300,300,300,300,300] },
+  warn:    { signal:[-74,-76,-78,-79,-80,-81,-80,-82,-83,-82,-83,-84], battery:[38,37,36,36,35,34,34,33,32,32,31,31],   interval:[300,360,360,420,420,480,480,480,480,480,480,480] },
+  danger:  { signal:[-80,-83,-85,-86,-87,-88,-88,-89,-89,-90,null,null], battery:[18,16,15,14,13,null,null,null,null,null,null,null], interval:[480,600,720,900,null,null,null,null,null,null,null,null] },
+  offline: { signal:[-74,-78,-82,-85,-88,-90,null,null,null,null,null,null], battery:[22,20,18,16,null,null,null,null,null,null,null,null], interval:[300,480,720,null,null,null,null,null,null,null,null,null] },
+};
+
+const TICKETS = [
+  { id:'T-2104', title:'启润泵站 E-07 故障停机', level:'danger', status:'紧急', desc:'原水泵站过热跳闸，需立即处理' },
+  { id:'T-2103', title:'北区2#水表离线排查',      level:'danger', status:'处理中', desc:'已派运维，预计 19:30 到达现场' },
+  { id:'T-2102', title:'TP监测仪电池更换',         level:'warn',   status:'待安排', desc:'剩余 31%，本周内处理' },
+  { id:'T-2101', title:'2#回流泵大修预检',         level:'warn',   status:'已排期', desc:'定于 2026-11-08 大修' },
+];
+
+const safeInit = (id) => {
+  try {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    return echarts.init(el);
+  } catch(e) { console.error(e); return null; }
+};
+
+let trendChart = null;
+const HOURS = ['06','07','08','09','10','11','12','13','14','15','16','17'];
+
+const app = Vue.createApp({
+  data() {
+    return {
+      clock: '--:--:--',
+      activeType: 'all',
+      selectedId: 'PMP-QR-01',
+      typeFilters: [
+        { id:'all', label:'全部' },
+        { id:'monitor', label:'在线监测仪' },
+        { id:'meter', label:'远传水表' },
+        { id:'pump', label:'泵站控制器' },
+      ],
+      tickets: TICKETS,
+    };
+  },
+  computed: {
+    filteredDevices() {
+      if (this.activeType === 'all') return ALL_DEVICES;
+      return ALL_DEVICES.filter(d => d.type === this.activeType);
+    },
+    filteredTotal() { return this.filteredDevices.length; },
+    filteredOnline() { return this.filteredDevices.filter(d => d.health !== 'offline').length; },
+    dangerCount() { return this.filteredDevices.filter(d => d.health === 'danger').length; },
+    warnCount() { return this.filteredDevices.filter(d => d.health === 'warn').length; },
+    matrixGroups() {
+      const groups = {};
+      this.filteredDevices.forEach(d => {
+        if (!groups[d.project]) groups[d.project] = { name: d.project, devices: [] };
+        groups[d.project].devices.push(d);
+      });
+      return Object.values(groups);
+    },
+    topRisk() {
+      return [...this.filteredDevices]
+        .filter(d => d.health !== 'good')
+        .sort((a,b) => a.score - b.score)
+        .slice(0, 5);
+    },
+    selectedDev() {
+      return ALL_DEVICES.find(d => d.id === this.selectedId) || ALL_DEVICES[0];
+    },
+  },
+  methods: {
+    tick() {
+      try {
+        this.clock = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      } catch(e) {}
+    },
+    selectDevice(d) {
+      this.selectedId = d.id;
+      this.$nextTick(() => { this.updateTrendChart(); });
+    },
+    updateTrendChart() {
+      if (!trendChart) { trendChart = safeInit('trendChart'); }
+      if (!trendChart) return;
+      try {
+        const td = TREND_DATA[this.selectedDev.health] || TREND_DATA.good;
+        const axis = {
+          axisLine:{ lineStyle:{ color:'#284355' } },
+          axisTick:{ show:false },
+          axisLabel:{ color:'#708594', fontSize:11 },
+          splitLine:{ lineStyle:{ color:'rgba(168,186,200,.07)' } },
+        };
+        trendChart.setOption({
+          grid:[
+            { left:48, right:16, top:14, bottom:80, height:'33%' },
+            { left:48, right:16, top:'42%', bottom:80, height:'22%' },
+            { left:48, right:16, top:'70%', bottom:34, height:'22%' },
+          ],
+          xAxis:[
+            { type:'category', data:HOURS, ...axis, gridIndex:0, axisLabel:{...axis.axisLabel, show:false} },
+            { type:'category', data:HOURS, ...axis, gridIndex:1, axisLabel:{...axis.axisLabel, show:false} },
+            { type:'category', data:HOURS, ...axis, gridIndex:2 },
+          ],
+          yAxis:[
+            { type:'value', name:'dBm', nameTextStyle:{color:'#708594',fontSize:9}, min:-100, max:-50, ...axis, gridIndex:0 },
+            { type:'value', name:'%', nameTextStyle:{color:'#708594',fontSize:9}, min:0, max:100, ...axis, gridIndex:1 },
+            { type:'value', name:'s', nameTextStyle:{color:'#708594',fontSize:9}, min:0, max:8000, ...axis, gridIndex:2 },
+          ],
+          series:[
+            {
+              name:'信号强度', type:'line', xAxisIndex:0, yAxisIndex:0,
+              data: td.signal, smooth:true, symbolSize:4,
+              lineStyle:{ color:'#36c2ff', width:2 },
+              areaStyle:{ color:'rgba(54,194,255,.1)' },
+              connectNulls:false,
+              markLine:{ data:[{yAxis:-75, lineStyle:{color:'rgba(255,181,71,.5)',type:'dashed',width:1}, label:{color:'#ffb547',formatter:'-75',fontSize:9}}], symbol:'none' },
+            },
+            {
+              name:'电池电量', type:'line', xAxisIndex:1, yAxisIndex:1,
+              data: td.battery, smooth:true, symbolSize:4,
+              lineStyle:{ color:'#35d07f', width:2 },
+              connectNulls:false,
+              markLine:{ data:[{yAxis:30, lineStyle:{color:'rgba(255,181,71,.5)',type:'dashed',width:1}, label:{color:'#ffb547',formatter:'30%',fontSize:9}}], symbol:'none' },
+            },
+            {
+              name:'上报间隔', type:'bar', xAxisIndex:2, yAxisIndex:2,
+              data: td.interval,
+              itemStyle:{ color:'rgba(123,107,255,.7)', borderRadius:2 },
+            },
+          ],
+          legend:{ show:false },
+          tooltip:{ trigger:'axis', backgroundColor:'rgba(5,13,21,.94)', borderColor:'#31566d', textStyle:{color:'#f2f7fa',fontSize:11}, axisPointer:{lineStyle:{color:'rgba(54,194,255,.4)'}} },
+        });
+      } catch(e) { console.error(e); }
+    },
+  },
+  mounted() {
+    this.tick();
+    setInterval(() => { try { this.tick(); } catch(e) {} }, 1000);
+    this.$nextTick(() => {
+      trendChart = safeInit('trendChart');
+      this.updateTrendChart();
+      const fit = () => {
+        try {
+          const el = document.getElementById('screen');
+          if (!el) return;
+          el.style.transform = 'translate(-50%,-50%) scale(' + Math.min(innerWidth/1920, innerHeight/1080) + ')';
+        } catch(e) {}
+      };
+      fit();
+      addEventListener('resize', () => {
+        try { fit(); if(trendChart) trendChart.resize(); } catch(e) {}
+      });
+    });
+  },
+  watch: {
+    selectedId() {
+      this.$nextTick(() => { this.updateTrendChart(); });
+    },
+    activeType() {
+      // 切换类型时若当前选中设备被过滤掉，自动跳到第一个
+      if (!this.filteredDevices.find(d => d.id === this.selectedId)) {
+        const first = this.filteredDevices[0];
+        if (first) { this.selectedId = first.id; }
+      }
+    },
+  },
+});
+app.mount('#app');
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "id": "wind-power",
+  "out": "/Users/xxx/my_pro/skills/skill-screen-picture/out/wind-power",
+  "errors": [],
+  "warnings": [],
+  "screenshots": [
+    "/Users/xxx/my_pro/skills/skill-screen-picture/out/wind-power/wind-power-1920.png"
+  ],
+  "engine": "/Users/xxx/.bigscreen-ai/cache/bigscreen-engine",
+  "build": "Built 8 registered screens + Home (standalone) -> /Users/xxx/my_pro/skills/skill-screen-picture/out/wind-power/.build",
+  "html": "/Users/xxx/my_pro/skills/skill-screen-picture/out/wind-power/wind-power.html",
+  "browser": "/Users/xxx/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "audit": {
+    "title": "智慧风电监控平台",
+    "stage": null,
+    "docScroll": [
+      1920,
+      1080
+    ],
+    "canvas": 1,
+    "renderer": "webgl",
+    "drawCalls": "134",
+    "overflow": [],
+    "emptyPanels": 0,
+    "bodyText": 1456
+  },
+  "generatedAt": "2026-10-27T18:18:26.891Z"
+}

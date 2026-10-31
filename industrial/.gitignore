@@ -1,0 +1,69 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# Build / Release staging
+release/industrial-dashboard-offline/
+*.tmp
+*.log
+
+# Env / Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Test outputs
+test-results/
+playwright-report/
+
+# Large local exports
+works/
+
+# Plan & tasks
+implementation_plan.md
+task.md
+
+# Confidential & Proprietary Scenario Isolation (CSO-SS-02)
+scenarios/custom-cso/
+scenarios/**/custom-cso-*
+scenarios/**/*-巡司河*
+docs/screenshots/states/cso-*
+**/scratch/
+excel_summary.txt
+dwg_strings_*.txt
+analyze_excel.py
+extract_dwg.py
+*.dwg
+
+# 过程截图与状态测试特写（仅保留主图与总览图）
+docs/screenshots/states/
+docs/screenshots/responsive/
+docs/screenshots/pipeline_*.png
+docs/screenshots/v6_*.png
+
+
