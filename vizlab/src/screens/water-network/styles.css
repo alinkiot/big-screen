@@ -1,0 +1,313 @@
+/* SPDX-License-Identifier: MIT — 城市供水管网3D孪生 · 深蓝水务风格 */
+:root {
+  --bg:        #040e1c;
+  --panel:     #07172e;
+  --line:      #00b4e820;
+  --accent:    #00d4ff;
+  --secondary: #00e5a0;
+  --text:      #d4eeff;
+  --muted:     #6a9ec0;
+  --dim:       #2c5470;
+  --radius:    10px;
+  /* 报警色 */
+  --wn-alarm:  #ff2040;
+  --wn-warn:   #f5c400;
+  --wn-high:   #ff6030;
+  --wn-ok:     #00e5a0;
+}
+
+/* 背景氛围：深蓝水务 */
+.ob-app {
+  background:
+    radial-gradient(ellipse at 50% 0%,   rgba(0, 180, 232, 0.10), transparent 50%),
+    radial-gradient(ellipse at 10% 80%,  rgba(0, 180, 140, 0.07), transparent 55%),
+    radial-gradient(ellipse at 90% 60%,  rgba(0, 100, 200, 0.08), transparent 55%),
+    linear-gradient(180deg, #040e1c, #050f1f 60%, #030b18);
+}
+.ob-header {
+  background: radial-gradient(ellipse at 50% -30%, rgba(0, 212, 255, 0.12), transparent 55%);
+}
+.ob-brand-mark {
+  border-radius: 8px;
+  background: linear-gradient(140deg, rgba(0,212,255,0.2), rgba(0,229,160,0.12));
+  border: 1px solid rgba(0,212,255,0.35);
+  box-shadow: 0 0 18px rgba(0,212,255,0.15), inset 0 0 10px rgba(0,212,255,0.08);
+}
+.ob-title h1 {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 7px;
+  background: linear-gradient(180deg, #e0f8ff, #7ad4ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ob-panel {
+  background: linear-gradient(130deg, rgba(10, 28, 52, 0.88), rgba(5, 16, 36, 0.82));
+  border-color: rgba(0, 180, 232, 0.14);
+}
+.ob-metric {
+  background: linear-gradient(130deg, rgba(8, 24, 48, 0.7), rgba(4, 14, 32, 0.75));
+  border-color: rgba(0, 180, 232, 0.12);
+}
+.ob-metric-value strong {
+  color: #d0f2ff;
+}
+.ob-stage {
+  background: radial-gradient(ellipse at 50% 55%, rgba(0, 180, 232, 0.1), transparent 65%), rgba(4, 14, 28, 0.6);
+  border-color: rgba(0, 180, 232, 0.22);
+}
+
+/* ---- 监测点列表 ---- */
+.wn-monitor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.wn-mon-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 64px 60px 38px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  background: rgba(255,255,255,0.018);
+  border: 1px solid transparent;
+  transition: background 0.15s;
+}
+.wn-mon-row.alarm {
+  background: rgba(255,32,64,0.08);
+  border-color: rgba(255,32,64,0.3);
+  animation: mon-alarm-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mon-alarm-pulse {
+  0%,100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 10px 1px rgba(255,32,64,0.18); }
+}
+.wn-mon-id {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 9px;
+  letter-spacing: 0.3px;
+}
+.wn-mon-name {
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.wn-mon-val {
+  text-align: right;
+  font-weight: 700;
+  font-size: 11px;
+}
+.wn-mon-val small { font-size: 8px; opacity: 0.7; margin-left: 1px; }
+.wn-mon-flow {
+  text-align: right;
+  color: var(--muted);
+  font-size: 10px;
+}
+.wn-mon-flow small { font-size: 8px; opacity: 0.7; }
+.wn-status-dot {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 8.5px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+/* ---- 泵站列表 ---- */
+.wn-pump-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.wn-pump-row {
+  display: grid;
+  grid-template-columns: 38px 1fr 44px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(0,180,232,0.08);
+}
+.wn-pump-id {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.wn-pump-info b {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.wn-pump-info small {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.wn-pump-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  border: 1px solid;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ---- 报警列表 ---- */
+.wn-alarms {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wn-alarm-row {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: start;
+  gap: 9px;
+  padding: 8px 9px;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.wn-alarm-row.critical {
+  background: rgba(255,32,64,0.08);
+  border-color: rgba(255,32,64,0.35);
+  animation: alarm-critical-pulse 0.9s ease-in-out infinite;
+}
+.wn-alarm-row.critical .ob-icon { color: var(--wn-alarm); }
+@keyframes alarm-critical-pulse {
+  0%,100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 14px 2px rgba(255,32,64,0.2); }
+}
+.wn-alarm-row.critical:hover { background: rgba(255,32,64,0.14); }
+.wn-alarm-row.warning {
+  background: rgba(245,196,0,0.07);
+  border-color: rgba(245,196,0,0.28);
+}
+.wn-alarm-row.warning .ob-icon { color: var(--wn-warn); }
+.wn-alarm-row.info {
+  background: rgba(0,212,255,0.05);
+  border-color: rgba(0,212,255,0.15);
+}
+.wn-alarm-row.info .ob-icon { color: var(--accent); }
+.wn-alarm-row strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.wn-alarm-row p {
+  margin: 0;
+  font-size: 9.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.wn-alarm-row small {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--dim);
+}
+.wn-alarm-row .ob-icon { width: 16px; height: 16px; margin-top: 2px; }
+
+/* ---- 调度日志 ---- */
+.wn-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wn-log-row {
+  display: grid;
+  grid-template-columns: 38px 10px 1fr;
+  align-items: start;
+  gap: 7px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(0,180,232,0.07);
+  font-size: 10.5px;
+}
+.wn-log-row:last-child { border-bottom: none; }
+.wn-log-row time { font-size: 9.5px; color: var(--dim); padding-top: 1px; }
+.wn-log-row i { width: 6px; height: 6px; border-radius: 50%; margin-top: 3px; }
+.wn-log-row i.ok   { background: var(--wn-ok);    box-shadow: 0 0 6px var(--wn-ok); }
+.wn-log-row i.warn { background: var(--wn-warn);  box-shadow: 0 0 6px var(--wn-warn); }
+.wn-log-row i.bad  { background: var(--wn-alarm); box-shadow: 0 0 6px var(--wn-alarm); animation: dot-flash 0.7s linear infinite; }
+@keyframes dot-flash { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.wn-log-row p { margin: 0; color: var(--muted); line-height: 1.4; }
+
+/* ---- 供水量分时柱图 ---- */
+.wn-supply-bars {
+  display: flex;
+  gap: 5px;
+  align-items: flex-end;
+  height: 52px;
+  margin: 10px 0 8px;
+}
+.wn-supply-bars i {
+  flex: 1;
+  min-height: 4px;
+  border-radius: 2px 2px 0 0;
+}
+
+/* ---- 场景标注针 ---- */
+.ob-scene-pin { border-radius: 10px; }
+
+/* ---- 整体压缩（防溢出）---- */
+.ob-metric        { padding: 10px 14px; }
+.ob-metric-value strong { font-size: 26px; letter-spacing: -0.4px; }
+.ob-metric-value em     { font-size: 9px; margin-right: 3px; }
+.ob-metric .ob-icon     { width: 18px; height: 18px; }
+.ob-panel         { padding: 10px 12px; }
+.ob-panel-heading { margin-bottom: 7px; }
+.ob-facts         { margin-top: 6px; }
+.ob-facts .ob-fact { padding: 5px 8px; }
+.ob-facts .ob-fact strong { font-size: 14px; }
+.ob-bars          { gap: 6px; }
+.ob-bars .ob-bar  { font-size: 9.5px; }
+.ob-task          { padding: 7px 0; }
+.ob-alert         { padding: 8px 8px; }
+
+/* 左栏第1面板（监测点列表）：行高压缩 */
+.ob-left .ob-panel:first-child .ob-panel-body { padding: 0; }
+.wn-mon-row  { padding: 3px 5px; gap: 5px; font-size: 9.5px; }
+.wn-mon-val  { font-size: 10.5px; }
+
+/* 左栏第3面板（供水量趋势）*/
+.wn-supply-bars { height: 38px; margin: 6px 0 5px; }
+.ob-left .ob-panel:nth-child(3) .ob-large strong { font-size: 26px; }
+.ob-left .ob-panel:nth-child(3) .ob-summary { margin-bottom: 0; }
+
+/* 右栏第1面板（泵站）*/
+.wn-pump-row  { padding: 5px 7px; gap: 7px; }
+.wn-pump-info b   { font-size: 10.5px; }
+.wn-pump-info small { font-size: 8.5px; margin-top: 1px; }
+
+/* 右栏第2面板（报警）*/
+.wn-alarm-row { padding: 6px 7px; gap: 7px; }
+.wn-alarm-row strong { font-size: 10.5px; margin-bottom: 2px; }
+.wn-alarm-row p   { font-size: 9px; }
+.wn-alarm-row small { margin-top: 2px; }
+.wn-alarms    { gap: 5px; }
+
+/* 右栏第3面板（调度日志） */
+.wn-log-row   { padding: 4px 0; font-size: 10px; }
+
+/* 右栏弹性比例 */
+.ob-right .ob-panel:first-child  { flex: 1.05; }
+.ob-right .ob-panel:nth-child(2) { flex: 1.15; }
+.ob-right .ob-panel:last-child   { flex: 0.8; }
+
+@media (min-width: 1800px) {
+  .ob-title h1 { font-size: 32px; }
+  .wn-supply-bars { height: 44px; }
+}

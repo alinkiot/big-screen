@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "id": "geo-hazard",
+  "out": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/geo-hazard",
+  "errors": [],
+  "warnings": [],
+  "screenshots": [
+    "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/geo-hazard/geo-hazard-1920.png"
+  ],
+  "engine": "/Users/weixingzheng/my_pro/skills/big-screen/vizlab",
+  "build": "Built 10 registered screens + Home (standalone) -> /Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/geo-hazard/.build",
+  "html": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/geo-hazard/geo-hazard.html",
+  "port": 5199,
+  "browser": "/Users/weixingzheng/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "audit": {
+    "title": "边坡地灾智能监测预警平台",
+    "stage": null,
+    "docScroll": [
+      1920,
+      1080
+    ],
+    "canvas": 1,
+    "renderer": "webgl",
+    "drawCalls": "26",
+    "overflow": [],
+    "emptyPanels": 0,
+    "bodyText": 1552
+  },
+  "report": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/geo-hazard/geo-hazard-report.json",
+  "generatedAt": "2026-10-31T09:25:51.551Z"
+}

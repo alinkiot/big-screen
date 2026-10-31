@@ -82,5 +82,56 @@
     "preview": "assets/previews/park.webp",
     "tags": ["三维园区", "楼宇空间", "零碳能源"],
     "renderer": "generic"
+  },
+  {
+    "id": "reactor-scada",
+    "title": "反应釜安全监控 SCADA",
+    "description": "化工厂反应釜实时安全监控，集成温压液位监测、操作防误联锁与声光报警。",
+    "category": "operations",
+    "label": "REACTOR SCADA",
+    "width": 1920,
+    "height": 1080,
+    "preview": "assets/previews/reactor-scada.svg",
+    "tags": [
+      "化工",
+      "SCADA",
+      "安全监控",
+      "报警联锁"
+    ],
+    "renderer": "generic"
+  },
+  {
+    "id": "water-network",
+    "title": "城市供水管网调度中心",
+    "description": "城市供水主干管网3D数字孪生，集成压力监测、漏损检测与泵站调度。",
+    "category": "3d",
+    "label": "WATER NEXUS",
+    "width": 1920,
+    "height": 1080,
+    "preview": "assets/previews/water-network.svg",
+    "tags": [
+      "供水",
+      "管网",
+      "SCADA",
+      "3D孪生"
+    ],
+    "renderer": "generic"
+  },
+  {
+    "id": "geo-hazard",
+    "title": "边坡地灾智能监测预警平台",
+    "description": "高速公路沿线边坡地质灾害实时监测、预警分级与应急指挥一体化平台。",
+    "category": "3d",
+    "label": "GEO SENTINEL",
+    "width": 1920,
+    "height": 1080,
+    "preview": "assets/previews/geo-hazard.svg",
+    "tags": [
+      "边坡",
+      "地灾",
+      "监测预警",
+      "高速公路"
+    ],
+    "renderer": "generic"
   }
 ]

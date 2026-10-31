@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "id": "reactor-scada",
+  "out": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/reactor-scada",
+  "errors": [],
+  "warnings": [],
+  "screenshots": [
+    "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/reactor-scada/reactor-scada-1920.png"
+  ],
+  "engine": "/Users/weixingzheng/my_pro/skills/big-screen/vizlab",
+  "build": "Built 8 registered screens + Home (standalone) -> /Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/reactor-scada/.build",
+  "html": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/reactor-scada/reactor-scada.html",
+  "port": 5199,
+  "browser": "/Users/weixingzheng/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "audit": {
+    "title": "反应釜安全监控 SCADA",
+    "stage": {
+      "w": 1920,
+      "h": 1080,
+      "scale": 1
+    },
+    "docScroll": [
+      1920,
+      1080
+    ],
+    "canvas": 0,
+    "renderer": null,
+    "drawCalls": null,
+    "overflow": [],
+    "emptyPanels": 0,
+    "bodyText": 1454
+  },
+  "report": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/reactor-scada/reactor-scada-report.json",
+  "generatedAt": "2026-10-31T08:31:51.200Z"
+}

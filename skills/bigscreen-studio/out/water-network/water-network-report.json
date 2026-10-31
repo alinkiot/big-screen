@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "id": "water-network",
+  "out": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/water-network",
+  "errors": [],
+  "warnings": [],
+  "screenshots": [
+    "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/water-network/water-network-1920.png"
+  ],
+  "engine": "/Users/weixingzheng/my_pro/skills/big-screen/vizlab",
+  "build": "Built 9 registered screens + Home (standalone) -> /Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/water-network/.build",
+  "html": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/water-network/water-network.html",
+  "port": 5199,
+  "browser": "/Users/weixingzheng/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "audit": {
+    "title": "城市供水管网调度中心",
+    "stage": null,
+    "docScroll": [
+      1920,
+      1080
+    ],
+    "canvas": 1,
+    "renderer": "webgl",
+    "drawCalls": "135",
+    "overflow": [],
+    "emptyPanels": 0,
+    "bodyText": 1663
+  },
+  "report": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/water-network/water-network-report.json",
+  "generatedAt": "2026-10-31T09:14:50.043Z"
+}

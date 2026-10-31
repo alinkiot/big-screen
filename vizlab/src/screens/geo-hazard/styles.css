@@ -1,0 +1,132 @@
+/* SPDX-License-Identifier: MIT */
+/* 高速公路边坡地灾监测预警平台 – 土褐色地质风 */
+:root {
+  --bg: #0d0f0e;
+  --panel: #131a13;
+  --line: #5a7a5520;
+  --accent: #3ad7ff;
+  --secondary: #35e0a6;
+  --text: #e8f0e9;
+  --muted: #8aaa90;
+  --dim: #4a6450;
+  --radius: 12px;
+}
+
+/* 底色：深灰带土色调 */
+.ob-app {
+  background:
+    radial-gradient(ellipse at 65% 10%, #4d321814, transparent 50%),
+    radial-gradient(ellipse at 20% 90%, #1a3a2012, transparent 55%),
+    linear-gradient(175deg, #0d100e 0%, #0a0f0d 100%);
+}
+.ob-header {
+  background: radial-gradient(ellipse at 50% -50%, #2d4a2224, transparent 67%);
+  border-bottom-color: #3a6a3522;
+}
+
+/* 品牌图标 */
+.ob-brand-mark {
+  border-radius: 4px;
+  background: linear-gradient(135deg, #1c3a20, #0f2010);
+  box-shadow: 0 0 18px #3ad7ff18;
+}
+
+/* 标题 */
+.ob-title h1 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  color: #d8eed8;
+}
+
+/* 面板背景：土褐深色 */
+.ob-panel {
+  background: linear-gradient(130deg, #1a2a1e80, #111a13);
+  border-color: #3a5a3820;
+}
+
+/* 指标卡 */
+.ob-metric {
+  background: linear-gradient(130deg, #1e2e2050, #141e15);
+  border-color: #3a5a3825;
+}
+.ob-metric-value strong {
+  color: #d8f0d8;
+}
+
+/* 3D 场景背景 */
+.ob-stage {
+  background: radial-gradient(ellipse at 50% 55%, #2a4a2210, transparent 68%), #0e160f44;
+  border-color: #3a6a3828;
+}
+
+/* ── 预警等级徽章 ─────────────────────────────────────────────── */
+.geo-level-normal  { color: #3ad7ff; }
+.geo-level-watch   { color: #ffe066; }
+.geo-level-warning { color: #ff9a3c; }
+.geo-level-alarm   { color: #ff4d6a; }
+
+/* 预警状态条颜色已通过 bars data 的 color 字段注入，此处补充进度条样式 */
+.ob-bar-track { background: rgba(40,70,40,.4); }
+
+/* 深部位移图容器 */
+#geo-incl-chart {
+  margin: 6px 0 4px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(10,20,12,.5);
+}
+#geo-incl-chart svg { display: block; }
+#geo-incl-chart .grid line { stroke: rgba(80,140,80,.2); }
+
+/* facts 压缩 */
+.ob-facts {
+  margin-top: 8px;
+}
+.ob-facts-row {
+  gap: 6px;
+}
+.ob-fact span {
+  font-size: 9.5px;
+}
+.ob-fact strong {
+  font-size: 16px;
+}
+
+/* 事件流 */
+.ob-task {
+  padding: 8px 0;
+  border-bottom-color: #2a3a2a30;
+}
+.ob-task span {
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+/* 整体压缩（防止面板溢出）*/
+.ob-metric { padding: 11px 15px; }
+.ob-metric-value strong { font-size: 28px; letter-spacing: -0.5px; }
+.ob-metric-value em { margin-right: 4px; font-size: 9.5px; }
+.ob-metric .ob-icon { width: 20px; height: 20px; }
+.ob-panel { padding: 13px 14px; }
+.ob-panel-heading { margin-bottom: 10px; }
+.ob-bars { gap: 8px; }
+.ob-bar { gap: 5px; }
+.ob-bar-label { font-size: 9.5px; }
+.ob-note { font-size: 8.5px; margin-top: 7px; }
+
+/* 水位 facts 紧凑 */
+.ob-left .ob-panel:nth-child(3) .ob-facts { margin-top: 6px; }
+.ob-left .ob-panel:nth-child(3) .ob-facts-row { gap: 5px; }
+.ob-left .ob-panel:nth-child(3) .ob-fact strong { font-size: 14px; }
+
+/* 右侧深部位移面板 */
+.ob-right .ob-panel:first-child .ob-facts { margin-top: 6px; padding-top: 0; }
+.ob-right .ob-panel:first-child .ob-fact strong { font-size: 15px; }
+
+/* 右侧事件流最后一个面板 */
+.ob-right .ob-panel:last-child .ob-task { padding: 7px 0; }
+.ob-right .ob-panel:last-child .ob-task:last-child { border-bottom: none; }
+
+/* 场景 pin 样式 */
+.ob-scene-pin { border-radius: 12px; }
