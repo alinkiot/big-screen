@@ -41,6 +41,7 @@ description: 创建工业监控大屏与 SCADA/HMI。核心是"控制 + 操作�
 - 控制台零错误，文字无裁切，浅色文字不得叠在浅色面板上。
 - 支持 `prefers-reduced-motion`，关闭循环位移和呼吸。
 - 大屏默认只读。
+- **工艺图元优先复用图元库**：绘制泵、压缩机、换热器、阀门、罐、管件等工艺设备时，先查 `references/process-symbol-library.md`（154 个 FUXA 矢量图元，`currentColor` 可随状态变色，优先用于需动态着色的 P&ID）；需要写实设备示意/装饰且不随状态变色时，查 `references/raster-icon-library.md`（1530 个 iotview 位图，`<img>` 引用）。缺图元或需精细化时再自绘。
 
 ## 3. 各模式专属契约
 
@@ -128,3 +129,5 @@ node skills/industrial-screen/scripts/validate-light-3d-hmi.js <html-file>   # l
 | `references/lcp-visual-aesthetics-guide.md` | local-panel |
 | `references/safety-interlock-and-offline-contract.md` | local-panel |
 | `references/gateway-integration.md` | 集成进网关 |
+| `references/process-symbol-library.md` | 共享（154 个 FUXA 工艺图元库 · 泵/压缩机/换热器/阀/罐/管件，`currentColor` 着色） |
+| `references/raster-icon-library.md` | 共享（1530 个 iotview 位图图标 · 35 分类，`<img>` 引用，不可改色，适合写实设备示意/装饰） |

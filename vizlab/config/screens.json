@@ -133,5 +133,21 @@
       "高速公路"
     ],
     "renderer": "generic"
+  },
+  {
+    "id": "bridge-monitoring",
+    "title": "桥梁智能监测运营中心",
+    "description": "多维度结构健康监测平台，智能体辅助分析，守护桥梁安全。",
+    "category": "3d",
+    "label": "BRIDGE AI",
+    "width": 1920,
+    "height": 1080,
+    "preview": "assets/previews/bridge-monitoring.svg",
+    "tags": [
+      "桥梁",
+      "结构健康",
+      "AI监测"
+    ],
+    "renderer": "generic"
   }
 ]

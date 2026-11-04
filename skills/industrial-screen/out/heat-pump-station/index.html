@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>热泵站能源监控系统</title>
+<script src="../../../../industrial/vendor/vue.global.prod.js"></script>
+<script src="../../../../industrial/vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#03080c;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+:root{
+  --bg:#071019;--s1:#0b1622;--s2:#0f1d2a;--s3:#132536;
+  --line:#20394a;--line-strong:#31566d;
+  --accent:#36c2ff;--accent-soft:rgba(54,194,255,.14);
+  --success:#35d07f;--warning:#ffb547;--danger:#ff5d5d;--offline:#708594;
+  --hot:#ff8a5c;--cold:#4fb6ff;
+  --t1:#f2f7fa;--t2:#a8bac8;--t3:#708594;--radius:8px;
+}
+.num{font-family:"Bahnschrift",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+[v-cloak]{display:none}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center;display:grid;grid-template-rows:78px 1fr 44px;overflow:hidden;
+  background:radial-gradient(circle at 50% 24%,rgba(54,194,255,.06),transparent 42%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 4px),var(--bg)}
+
+/* 顶栏 */
+.topbar{display:grid;grid-template-columns:520px 1fr 520px;align-items:center;padding:0 24px;border-bottom:1px solid var(--line);background:#050d15}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .logo{width:38px;height:38px;flex:none}
+.brand strong{display:block;font-size:17px;letter-spacing:2px}
+.brand span{font-size:11px;color:var(--t3);letter-spacing:1.4px}
+.title{text-align:center}
+.title h1{margin:0;font-size:32px;letter-spacing:4px}
+.title p{margin:5px 0 0;color:var(--accent);font-size:11px;letter-spacing:6px}
+.topright{display:flex;align-items:center;justify-content:flex-end;gap:18px}
+.conn{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t2);padding:6px 11px;border:1px solid var(--line);border-radius:6px;background:var(--s2)}
+.conn i{width:8px;height:8px;border-radius:50%;background:var(--warning)}
+.conn.online i{background:var(--success)}
+.conn.offline i{background:var(--offline)}
+.scene-tabs{display:flex;gap:6px}
+.scene-tabs button{cursor:pointer;background:var(--s2);border:1px solid var(--line);color:var(--t2);font-size:12px;padding:6px 10px;border-radius:6px;font-family:inherit}
+.scene-tabs button.active{background:var(--accent-soft);border-color:var(--line-strong);color:var(--accent)}
+.clock{text-align:right;min-width:118px}
+.clock strong{display:block;font-size:20px}
+.clock span{font-size:11px;color:var(--t3)}
+
+/* 主区 */
+.main{min-height:0;display:grid;grid-template-columns:360px 1fr 360px;gap:14px;padding:14px 16px}
+.col{min-height:0;display:grid;gap:14px}
+.col.left{grid-template-rows:170px 1fr 1fr}
+.col.middle{grid-template-rows:96px 1fr 262px}
+.col.right{grid-template-rows:1fr 1fr}
+.panel{min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:linear-gradient(145deg,rgba(15,29,42,.95),rgba(8,18,28,.96));display:flex;flex-direction:column}
+.head{height:42px;flex:none;padding:0 15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.head b{font-size:17px;font-weight:650}
+.head .tag{font-size:11px;color:var(--t3)}
+.body{flex:1;min-height:0;padding:12px 14px;overflow:hidden}
+
+/* 源侧/负荷侧温度卡 */
+.tpanel{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tcard{padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--s2)}
+.tcard label{display:block;color:var(--t2);font-size:12px}
+.tcard strong{display:block;margin-top:4px;font-size:22px}
+.tcard strong.hot{color:var(--hot)}.tcard strong.cold{color:var(--cold)}
+.tcard span{font-size:11px;color:var(--t3)}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;height:100%}
+.kpi{padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--s2);display:flex;flex-direction:column;justify-content:center}
+.kpi label{display:block;color:var(--t2);font-size:13px}
+.kpi strong{display:block;margin-top:5px;font-size:30px;color:var(--accent);line-height:1}
+.kpi span{margin-top:5px;font-size:11px;color:var(--t3)}
+.kpi strong.ok{color:var(--success)}.kpi strong.warn{color:var(--warning)}.kpi strong.bad{color:var(--danger)}
+
+/* 机组列表 */
+.units{display:flex;flex-direction:column;gap:8px;height:100%;overflow:auto}
+.unit{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--s2);cursor:pointer}
+.unit:hover{border-color:var(--line-strong)}
+.unit i{width:9px;height:9px;border-radius:50%}
+.unit .nm{font-size:14px}
+.unit .sub{font-size:11px;color:var(--t3)}
+.unit .mt{text-align:right}
+.unit .mt b{font-size:16px}
+.unit .mt em{display:block;font-size:11px;font-style:normal;color:var(--t3)}
+
+/* 主视觉 */
+.scene{flex:1;min-height:0;position:relative}
+.scene svg{width:100%;height:100%;display:block}
+.legend{position:absolute;left:14px;bottom:12px;display:flex;gap:14px;font-size:12px;color:var(--t2);background:rgba(5,13,21,.72);padding:6px 12px;border:1px solid var(--line);border-radius:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.hint{position:absolute;right:14px;top:10px;font-size:11px;color:var(--t3)}
+
+/* 图表 */
+.chart{width:100%;height:100%}
+
+/* 报警列表 */
+.alarms{display:flex;flex-direction:column;gap:7px;height:100%;overflow:auto}
+.alarm{display:grid;grid-template-columns:4px 1fr auto;gap:10px;align-items:center;padding:8px 10px 8px 0;border:1px solid var(--line);border-radius:6px;background:#08131d;overflow:hidden}
+.alarm .bar{width:4px;align-self:stretch;border-radius:4px 0 0 4px}
+.alarm .txt b{display:block;font-size:13px}
+.alarm .txt span{font-size:11px;color:var(--t3)}
+.alarm .tm{font-size:11px;color:var(--t3);padding-right:10px;white-space:nowrap}
+.alarm.l1 .bar{background:var(--danger)}
+.alarm.l2 .bar{background:var(--warning)}
+.alarm.l3 .bar{background:var(--offline)}
+.alarm.l1 b{color:var(--danger)}
+
+/* 底栏 */
+.footer{display:grid;grid-template-columns:1.2fr 1fr 1.2fr;align-items:center;padding:0 20px;border-top:1px solid var(--line);background:#050d15;font-size:12px;color:var(--t2)}
+.footer div:nth-child(2){text-align:center;color:var(--t3)}
+.footer div:last-child{text-align:right}
+.q-good{color:var(--success)}.q-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);margin-right:5px;vertical-align:0}
+
+/* Faceplate 弹窗 */
+.mask{position:absolute;inset:0;background:rgba(3,8,12,.55);display:flex;align-items:center;justify-content:center;z-index:30}
+.fp{width:420px;max-height:580px;overflow:auto;border:1px solid var(--line-strong);border-radius:10px;background:linear-gradient(160deg,#102131,#0a1622);box-shadow:0 18px 48px rgba(0,0,0,.5)}
+.fp-h{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line)}
+.fp-h .tg{font-size:12px;color:var(--t3)}
+.fp-h .nm{font-size:17px;font-weight:650}
+.fp-h .md{font-size:11px;padding:2px 8px;border:1px solid var(--line-strong);border-radius:4px;color:var(--accent);margin-left:8px}
+.fp-h .x{cursor:pointer;color:var(--t3);font-size:18px;background:none;border:none}
+.fp-sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+.fp-sec h5{margin:0 0 9px;font-size:12px;color:var(--t3);letter-spacing:1px;font-weight:600}
+.fp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.fp-item{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--s2)}
+.fp-item label{display:block;font-size:11px;color:var(--t2)}
+.fp-item b{display:block;margin-top:3px;font-size:18px}
+.fp-perm{display:flex;flex-direction:column;gap:6px}
+.fp-perm div{font-size:13px;color:var(--t2)}
+.fp-perm .ok::before{content:'✓ ';color:var(--success)}
+.fp-perm .no::before{content:'✕ ';color:var(--danger)}
+.fp-foot{padding:11px 16px;font-size:12px;color:var(--t3);display:flex;justify-content:space-between}
+.fp-trend{height:120px;margin-top:4px}
+
+/* 动效 */
+.flow{stroke-dasharray:9 11;animation:flow 2.6s linear infinite}
+.flow.hot{animation-duration:2.2s}
+@keyframes flow{to{stroke-dashoffset:-40}}
+.spin{transform-origin:center;transform-box:fill-box;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pulse{animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){.flow,.spin,.pulse{animation:none}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak><div id="screen">
+  <!-- ========== 顶栏 ========== -->
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40"><rect x="6" y="10" width="28" height="20" rx="3" fill="none" stroke="#36c2ff" stroke-width="2"/><path d="M12 20h16M20 14v12" stroke="#ff8a5c" stroke-width="2"/><circle cx="20" cy="20" r="3.5" fill="none" stroke="#35d07f" stroke-width="1.6"/></svg>
+      <div><strong>区域能源 · 热泵站监控</strong><span>HEAT PUMP STATION SCADA</span></div>
+    </div>
+    <div class="title"><h1>热泵站能源监控系统</h1><p>SOURCE · HEAT PUMP · LOAD · COP</p></div>
+    <div class="topright">
+      <div class="scene-tabs">
+        <button v-for="s in scenes" :key="s.id" :class="{active:s.id===scene}" @click="switchScene(s.id)">{{s.label}}</button>
+      </div>
+      <div class="conn" :class="conn.status"><i></i>{{conn.text}}</div>
+      <div class="clock num"><strong>{{clock}}</strong><span>{{date}}</span></div>
+    </div>
+  </header>
+
+  <!-- ========== 主区 ========== -->
+  <main class="main">
+    <!-- 左翼：源侧/负荷侧温度 + 机组群 + COP 趋势 -->
+    <section class="col left">
+      <article class="panel">
+        <div class="head"><b>源侧 / 负荷侧</b><span class="tag">实时 · 2s</span></div>
+        <div class="body tpanel">
+          <div class="tcard"><label>源侧进水温度</label><strong class="cold num">{{state.source.supplyT}}</strong><span>℃ · 地源侧</span></div>
+          <div class="tcard"><label>源侧回水温度</label><strong class="cold num">{{state.source.returnT}}</strong><span>℃</span></div>
+          <div class="tcard"><label>负荷侧供水温度</label><strong class="hot num">{{state.load.supplyT}}</strong><span>℃ · 目标 45</span></div>
+          <div class="tcard"><label>负荷侧回水温度</label><strong class="hot num">{{state.load.returnT}}</strong><span>℃</span></div>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="head"><b>热泵机组群</b><span class="tag">{{runningUnits}} / {{state.units.length}} 运行 · 点击查看</span></div>
+        <div class="body units">
+          <div class="unit" v-for="u in state.units" :key="u.id" @click="openFp(u.id)">
+            <i :style="{background:stateColor(u.state)}"></i>
+            <div><div class="nm">{{u.name}}</div><div class="sub">{{stateText(u.state)}} · {{u.mode}} · 负荷 {{u.load}}%</div></div>
+            <div class="mt"><b class="num" :style="{color:u.state==='RUNNING'?'var(--accent)':'var(--t3)'}">{{u.state==='RUNNING'?u.cop:'--'}}</b><em>COP</em></div>
+          </div>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="head"><b>系统 COP 趋势</b><span class="tag">8 小时</span></div>
+        <div class="body"><div id="copChart" class="chart"></div></div>
+      </article>
+    </section>
+
+    <!-- 中部：KPI + 工艺主视觉 + 能耗/制热量趋势 -->
+    <section class="col middle">
+      <div class="kpis">
+        <div class="kpi"><label>系统综合 COP</label><strong class="num" :class="state.kpi.cop>=4?'ok':(state.kpi.cop>=3?'':'warn')">{{state.kpi.cop}}</strong><span>目标 ≥4.0</span></div>
+        <div class="kpi"><label>实时制热量</label><strong class="num">{{state.kpi.heat}}</strong><span>kW</span></div>
+        <div class="kpi"><label>总耗电功率</label><strong class="num">{{state.kpi.power}}</strong><span>kW · 今日 {{state.kpi.kwh}} kWh</span></div>
+        <div class="kpi"><label>当前报警</label><strong class="num" :class="activeAlarms>0?'bad':'ok'">{{activeAlarms}}</strong><span>{{activeAlarms>0?'存在未确认报警':'系统运行正常'}}</span></div>
+      </div>
+
+      <article class="panel">
+        <div class="head"><b>热泵站工艺流程</b><span class="tag">{{sceneLabel}} · 源侧→机组→负荷侧</span></div>
+        <div class="scene">
+          <svg viewBox="0 0 1120 540" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="box" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17374d"/><stop offset="1" stop-color="#0d2131"/></linearGradient>
+
+              <!-- ======================================================
+                   FUXA 工艺图元库（MIT License, frangoteam/FUXA）
+                   源：client/src/assets/lib/svgeditor/shapes/img/
+                   已清洗 Inkscape 元数据，stroke 统一改为 currentColor，
+                   由外层 <use> 的 color 驱动状态色。viewBox 统一 0 0 24 24。
+                   ====================================================== -->
+              <!-- 螺杆压缩机 compscrew -->
+              <symbol id="sym-compscrew" viewBox="0 0 24 24">
+                <g transform="matrix(.54594 0 0 .54594 1.109 1.109)" fill="none" stroke="currentColor" stroke-width="2.1351">
+                  <path d="m40 20a20 20 0 0 1-20 20 20 20 0 0 1-20-20 20 20 0 0 1 20-20 20 20 0 0 1 20 20"/>
+                  <path d="m10 2.8 28 8.4m-28 26 28-8.4m-28-10.8 2-2 4 4 4-4 4 4 4-4 2 2m-20 4 2-2 4 4 4-4 4 4 4-4 2 2"/>
+                </g>
+              </symbol>
+              <!-- 板式/管壳换热器 exchanger-heat -->
+              <symbol id="sym-exchanger" viewBox="0 0 24 24">
+                <g transform="matrix(.30011 0 0 .39281 1.4963 3.9441)" fill="none" stroke="currentColor" stroke-width="3.2227">
+                  <rect width="70" height="40"/>
+                  <path d="m70 0-70 40" stroke-miterlimit="10"/>
+                </g>
+              </symbol>
+              <!-- 离心泵 pumpcentri1 -->
+              <symbol id="sym-pump" viewBox="0 0 24 24">
+                <g transform="matrix(.41775 0 0 .41775 1.437 3.079)" fill="none" stroke="currentColor" stroke-width="2.87255" stroke-miterlimit="7">
+                  <path d="M 0.43,18.66 C 2.16,7.93 11.02,0.07 21.43,0 H 50 v 14.93 h -8.25 c 2.72,7.98 0.9,16.88 -4.71,23 -5.61,6.12 -14.05,8.41 -21.8,5.91 C 7.49,41.34 1.76,34.48 0.43,26.12"/>
+                </g>
+              </symbol>
+              <!-- 电机 motor-simb -->
+              <symbol id="sym-motor" viewBox="0 0 24 24">
+                <g transform="matrix(.20891 0 0 .20891 1.5706 1.335)" fill="none" stroke="currentColor">
+                  <circle cx="50" cy="50" r="50"/>
+                  <path d="m49 1 50 49-50 49z" stroke-miterlimit="10"/>
+                </g>
+                <ellipse cx="12.019" cy="11.826" rx="10.829" ry="10.78" fill="none" stroke="currentColor" stroke-width="1.2" stroke-miterlimit="10"/>
+              </symbol>
+              <!-- 手动阀/节流阀 valve-ax（蝶形双三角） -->
+              <symbol id="sym-valve" viewBox="0 0 24 24">
+                <path d="m1.0413 4.5817 11.003 5.6894-11.003 5.6894zm22.005 0-11.003 5.6894 11.003 5.6894z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-miterlimit="10"/>
+              </symbol>
+              <!-- 储罐/定压罐 tank3 -->
+              <symbol id="sym-tank" viewBox="0 0 24 24">
+                <g transform="matrix(.21429 0 0 .21429 6.5926 .95286)" fill="none" stroke="currentColor" stroke-width="5.6">
+                  <path d="m9.75 15.42c0-8.24 6.72-14.92 15-14.92s15 6.68 15 14.92v24.87l10 9.95v34.82c0 6.87-11.19 12.44-25 12.44s-25-5.57-25-12.44v-34.57l10-10.2z"/>
+                </g>
+              </symbol>
+            </defs>
+
+            <!-- ===== 管道底层 ===== -->
+            <g fill="none" stroke="#24415a" stroke-width="11" stroke-linecap="round">
+              <!-- 源侧循环：地源井 -> 机组蒸发器 -> 回地源 -->
+              <path d="M120 150 H360"/><path d="M360 150 V210"/>
+              <path d="M360 300 V360 H120 V150"/>
+              <!-- 负荷侧循环：机组冷凝器 -> 板换 -> 分集水器 -> 末端 -> 回 -->
+              <path d="M560 210 H760"/><path d="M760 150 V360"/><path d="M760 360 H560 V300"/>
+              <path d="M820 200 H980 V440 H360 V360"/>
+            </g>
+            <!-- 源侧流动（冷/蓝） -->
+            <g fill="none" stroke="#4fb6ff" stroke-width="3.3" stroke-linecap="round">
+              <path class="flow" :class="{flow:flowing}" d="M120 150 H360"/>
+              <path class="flow" :class="{flow:flowing}" d="M360 300 V360 H120 V150"/>
+            </g>
+            <!-- 负荷侧流动（热/橙） -->
+            <g fill="none" stroke="#ff8a5c" stroke-width="3.3" stroke-linecap="round">
+              <path class="flow hot" :class="{flow:flowing}" d="M560 210 H760"/>
+              <path class="flow hot" :class="{flow:flowing}" d="M820 200 H980 V440 H360 V360"/>
+            </g>
+
+            <!-- ===== 地源井 / 源侧（储罐图元 + 源侧循环泵） ===== -->
+            <g>
+              <rect x="56" y="120" width="68" height="240" rx="6" fill="url(#box)" stroke="#31566d"/>
+              <use href="#sym-tank" x="64" y="150" width="52" height="52" style="color:var(--cold)"/>
+              <text x="90" y="238" text-anchor="middle" fill="#a8bac8" font-size="13">地源井群</text>
+              <text x="90" y="112" text-anchor="middle" fill="#4fb6ff" font-size="12" class="num">{{state.source.supplyT}}℃</text>
+              <!-- 源侧循环泵（泵体 + 电机，运行旋转叶轮以电机符号表达） -->
+              <g transform="translate(228 150)">
+                <use href="#sym-pump" x="-20" y="-20" width="40" height="40" :style="{color:runningUnits>0?'var(--cold)':'var(--offline)'}"/>
+                <use href="#sym-motor" x="-13" y="-42" width="26" height="26" :class="pumpAnim" :style="{color:runningUnits>0?'var(--success)':'var(--offline)'}"/>
+                <text y="40" text-anchor="middle" fill="#a8bac8" font-size="11">源侧循环泵</text>
+              </g>
+              <!-- 源侧进/回水节流阀 -->
+              <use href="#sym-valve" x="300" y="136" width="28" height="28" style="color:var(--cold)"/>
+            </g>
+
+            <!-- ===== 热泵机组（蒸发器 + 螺杆压缩机 + 冷凝器） ===== -->
+            <g>
+              <rect x="360" y="188" width="200" height="132" rx="10" fill="url(#box)" stroke="#31566d" stroke-width="1.5"/>
+              <text x="460" y="182" text-anchor="middle" fill="#a8bac8" font-size="14">热泵机组 HP-01~04</text>
+              <!-- 蒸发器（换热器图元 · 冷侧） -->
+              <use href="#sym-exchanger" x="366" y="206" width="52" height="46" style="color:var(--cold)"/>
+              <text x="392" y="268" text-anchor="middle" fill="#4fb6ff" font-size="11">蒸发器</text>
+              <!-- 螺杆压缩机（FUXA compscrew，运行旋转） -->
+              <g transform="translate(460 252)">
+                <use href="#sym-compscrew" x="-30" y="-30" width="60" height="60" :class="compAnim" :style="{color:runningUnits>0?'var(--success)':'var(--offline)'}"/>
+                <text y="48" text-anchor="middle" fill="#a8bac8" font-size="11">螺杆压缩机</text>
+              </g>
+              <!-- 冷凝器（换热器图元 · 热侧） -->
+              <use href="#sym-exchanger" x="502" y="206" width="52" height="46" style="color:var(--hot)"/>
+              <text x="528" y="268" text-anchor="middle" fill="#ff8a5c" font-size="11">冷凝器</text>
+            </g>
+
+            <!-- ===== 板式换热器（二次侧隔离） ===== -->
+            <g>
+              <rect x="716" y="150" width="88" height="110" rx="6" fill="url(#box)" stroke="#31566d"/>
+              <use href="#sym-exchanger" x="726" y="168" width="68" height="60" style="color:var(--hot)"/>
+              <text x="760" y="248" text-anchor="middle" fill="#a8bac8" font-size="13">板式换热器</text>
+            </g>
+
+            <!-- ===== 负荷侧一次循环泵（泵 + 电机） ===== -->
+            <g transform="translate(900 200)">
+              <use href="#sym-pump" x="-22" y="-22" width="44" height="44" :style="{color:runningUnits>0?'var(--hot)':'var(--offline)'}"/>
+              <use href="#sym-motor" x="-14" y="-46" width="28" height="28" :class="pumpAnim" :style="{color:runningUnits>0?'var(--success)':'var(--offline)'}"/>
+              <text y="44" text-anchor="middle" fill="#a8bac8" font-size="12">一次循环泵</text>
+            </g>
+
+            <!-- ===== 分集水器 / 末端（含出水节流阀） ===== -->
+            <g>
+              <rect x="360" y="420" width="620" height="40" rx="6" fill="url(#box)" stroke="#31566d"/>
+              <use href="#sym-valve" x="640" y="424" width="32" height="32" style="color:var(--hot)"/>
+              <text x="760" y="446" text-anchor="middle" fill="#a8bac8" font-size="13">供热分集水器 → 末端负荷</text>
+              <text x="360" y="412" text-anchor="start" fill="#ff8a5c" font-size="12" class="num">供 {{state.load.supplyT}}℃</text>
+              <text x="980" y="412" text-anchor="end" fill="#4fb6ff" font-size="12" class="num">回 {{state.load.returnT}}℃</text>
+            </g>
+          </svg>
+          <div class="hint">工艺图元来自 FUXA（MIT）· 点击左侧机组查看 Faceplate</div>
+          <div class="legend">
+            <span><i style="background:var(--cold)"></i>源侧(冷)</span>
+            <span><i style="background:var(--hot)"></i>负荷侧(热)</span>
+            <span><i style="background:var(--success)"></i>运行</span>
+            <span><i style="background:var(--warning)"></i>关注</span>
+            <span><i style="background:var(--danger)"></i>故障</span>
+            <span><i style="background:var(--offline)"></i>停机</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="head"><b>制热量 / 耗电功率</b><span class="tag">24 小时 · kW</span></div>
+        <div class="body"><div id="energyChart" class="chart"></div></div>
+      </article>
+    </section>
+
+    <!-- 右翼：能效分布 + 报警 -->
+    <section class="col right">
+      <article class="panel">
+        <div class="head"><b>机组负荷分配</b><span class="tag">实时 %</span></div>
+        <div class="body"><div id="loadChart" class="chart"></div></div>
+      </article>
+      <article class="panel">
+        <div class="head"><b>报警与事件</b><span class="tag">按优先级</span></div>
+        <div class="body alarms">
+          <div v-for="a in state.alarms" :key="a.id" class="alarm" :class="a.cls">
+            <div class="bar" :class="{pulse:a.cls==='l1'&&!a.ack}"></div>
+            <div class="txt"><b>{{a.title}}</b><span>{{a.desc}} · {{a.ack?'已确认':'未确认'}}</span></div>
+            <div class="tm">{{a.time}}</div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <!-- ========== 底栏 ========== -->
+  <footer class="footer">
+    <div><span class="q-dot"></span>监控系统在线 · 热泵机组 {{state.units.length}} 台 · 源侧/负荷侧循环泵正常</div>
+    <div>数据接入：MQTT / OPC UA · 采样周期 2s · 当前工况：{{sceneLabel}}</div>
+    <div><span class="q-good">数据质量 GOOD</span> · 更新时间 {{clock}} · 演示数据</div>
+  </footer>
+
+  <!-- ========== Faceplate（只读监视） ========== -->
+  <div class="mask" v-if="fp" @click.self="closeFp">
+    <div class="fp">
+      <div class="fp-h">
+        <div><span class="tg">{{fp.id}}</span><span class="nm"> {{fp.name}}</span><span class="md">{{fp.mode}}</span></div>
+        <button class="x" @click="closeFp">✕</button>
+      </div>
+      <div class="fp-sec">
+        <h5>状态监控</h5>
+        <div class="fp-grid">
+          <div class="fp-item"><label>运行状态</label><b :style="{color:stateColor(fp.state)}">{{stateText(fp.state)}}</b></div>
+          <div class="fp-item"><label>能效比 COP</label><b class="num">{{fp.state==='RUNNING'?fp.cop:'--'}}</b></div>
+          <div class="fp-item"><label>机组负荷</label><b class="num">{{fp.load}}%</b></div>
+          <div class="fp-item"><label>压缩机频率</label><b class="num">{{fp.hz}} Hz</b></div>
+          <div class="fp-item"><label>冷凝温度</label><b class="num" style="color:var(--hot)">{{fp.condT}}℃</b></div>
+          <div class="fp-item"><label>蒸发温度</label><b class="num" style="color:var(--cold)">{{fp.evapT}}℃</b></div>
+          <div class="fp-item"><label>排气压力</label><b class="num">{{fp.highP}} MPa</b></div>
+          <div class="fp-item"><label>吸气压力</label><b class="num">{{fp.lowP}} MPa</b></div>
+        </div>
+      </div>
+      <div class="fp-sec">
+        <h5>最近 5 分钟 COP 趋势</h5>
+        <div id="fpTrend" class="fp-trend"></div>
+      </div>
+      <div class="fp-sec">
+        <h5>运行允许条件 (Permissive)</h5>
+        <div class="fp-perm">
+          <div :class="fp.perm.flow?'ok':'no'">源侧 / 负荷侧水流开关正常</div>
+          <div :class="fp.perm.press?'ok':'no'">高低压保护未动作</div>
+          <div :class="fp.perm.temp?'ok':'no'">排气温度在限值内</div>
+          <div :class="fp.perm.oil?'ok':'no'">油压差正常</div>
+        </div>
+      </div>
+      <div class="fp-foot">
+        <span>累计运行 {{fp.runH}} h</span>
+        <span>距下次保养 {{fp.maintH}} h</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+(function(){
+  'use strict';
+  const $id=(id)=>document.getElementById(id);
+  const safeInit=(id)=>{try{const el=$id(id);if(!el)return null;return echarts.init(el);}catch(e){console.error(e);return null;}};
+  const stateColor=(s)=>({RUNNING:'#35d07f',WARNING:'#ffb547',FAULT:'#ff5d5d',STOPPED:'#708594',OFFLINE:'#708594'}[s]||'#708594');
+  const stateText=(s)=>({RUNNING:'运行中',WARNING:'关注',FAULT:'故障',STOPPED:'停机备妥',OFFLINE:'离线'}[s]||'未知');
+
+  // ============================================================
+  // 单一数据源 state —— 画面只绑定它。
+  // 接 MQTT 时调用 applyState(patch) 做深合并，画面自动刷新，
+  // 无需改任何渲染代码。见底部 onMqttMessage() 占位。
+  // ============================================================
+  const UNIT_META=[
+    {id:'HP-01',name:'1# 螺杆热泵机组'},
+    {id:'HP-02',name:'2# 螺杆热泵机组'},
+    {id:'HP-03',name:'3# 螺杆热泵机组'},
+    {id:'HP-04',name:'4# 离心热泵机组'}
+  ];
+
+  // 工况脚本：稳态 / 高负荷 / 高压故障 / 恢复
+  const SCENES={
+    steady:{label:'平稳供热',
+      source:{supplyT:12.6,returnT:8.2},load:{supplyT:45.1,returnT:40.3},
+      kpi:{cop:4.3,heat:2860,power:665,kwh:9240},
+      units:[['RUNNING','AUTO',4.4,72,46,58,42,2.1,0.52,0.42,8420,520],
+             ['RUNNING','AUTO',4.3,70,45,57,41,2.0,0.51,0.40,8010,930],
+             ['STOPPED','AUTO',0,0,0,0,0,0,0,0,7650,160],
+             ['RUNNING','AUTO',4.2,68,44,56,40,2.0,0.50,0.41,5240,1480]],
+      alarms:[{id:'a1',cls:'l3',title:'3# 机组 停机备妥',desc:'轮换备用',time:'08:05',ack:true}]},
+    high:{label:'高负荷',
+      source:{supplyT:11.8,returnT:7.1},load:{supplyT:46.8,returnT:41.9},
+      kpi:{cop:3.8,heat:3620,power:953,kwh:10120},
+      units:[['RUNNING','AUTO',3.9,92,50,62,38,2.4,0.58,0.38,8426,514],
+             ['RUNNING','AUTO',3.8,90,49,61,37,2.3,0.57,0.37,8016,924],
+             ['RUNNING','AUTO',3.7,88,49,61,37,2.3,0.56,0.37,7656,154],
+             ['RUNNING','AUTO',3.9,86,48,60,38,2.3,0.55,0.38,5246,1474]],
+      alarms:[{id:'a2',cls:'l2',title:'系统 COP 偏低',desc:'高负荷 · 3.8 低于目标 4.0',time:'07:42',ack:false},
+              {id:'a3',cls:'l3',title:'4 台机组全投入',desc:'高负荷调度',time:'07:30',ack:true}]},
+    fault:{label:'高压故障',
+      source:{supplyT:11.5,returnT:6.8},load:{supplyT:43.2,returnT:39.8},
+      kpi:{cop:3.4,heat:2510,power:738,kwh:10480},
+      units:[['RUNNING','AUTO',3.9,90,50,62,38,2.4,0.58,0.38,8432,508],
+             ['FAULT','MANUAL',0,0,0,74,36,3.1,0.66,0.35,8022,918],
+             ['RUNNING','AUTO',3.7,88,49,61,37,2.3,0.56,0.37,7662,148],
+             ['WARNING','AUTO',3.6,94,50,66,37,2.6,0.61,0.36,5252,1468]],
+      alarms:[{id:'a4',cls:'l1',title:'2# 机组 高压保护跳机',desc:'排气压力 3.1MPa 超限 · 已停机',time:'10:18',ack:false},
+              {id:'a5',cls:'l1',title:'冷凝温度过高',desc:'2# 冷凝 74℃ · 检查冷却侧',time:'10:18',ack:false},
+              {id:'a6',cls:'l2',title:'4# 机组负荷偏高',desc:'94% · 承接 2# 负荷',time:'10:19',ack:false}]},
+    recover:{label:'故障恢复',
+      source:{supplyT:12.2,returnT:7.8},load:{supplyT:44.6,returnT:40.0},
+      kpi:{cop:4.0,heat:2780,power:695,kwh:10760},
+      units:[['RUNNING','AUTO',4.2,74,47,58,41,2.1,0.53,0.41,8440,500],
+             ['STOPPED','MANUAL',0,0,0,0,0,0,0,0,8024,0],
+             ['RUNNING','AUTO',4.1,72,46,57,40,2.0,0.52,0.40,7668,142],
+             ['RUNNING','AUTO',4.0,70,45,57,40,2.0,0.51,0.41,5258,1462]],
+      alarms:[{id:'a7',cls:'l2',title:'2# 机组 故障已复位',desc:'待手动投运 · 保养中',time:'10:52',ack:true},
+              {id:'a8',cls:'l3',title:'系统恢复平稳',desc:'COP 回升至 4.0',time:'11:05',ack:true}]}
+  };
+
+  function buildUnits(arr){
+    // 工况数组每台机组 12 个字段，索引含义：
+    // 0 state, 1 mode, 2 cop, 3 load(%), 4 hz, 5 condT(℃), 6 evapT(℃),
+    // 7 highP(MPa 排气), 8 lowP(MPa 吸气), 9 预留, 10 runH(累计运行h), 11 maintH(距保养h)
+    return UNIT_META.map((m,i)=>{
+      const a=arr[i];
+      return {
+        id:m.id,name:m.name,state:a[0],mode:a[1],cop:a[2].toFixed(1),load:a[3],
+        hz:a[4].toFixed(0),condT:a[5].toFixed(1),evapT:a[6].toFixed(1),
+        highP:a[7].toFixed(2),lowP:a[8].toFixed(2),
+        runH:a[10].toLocaleString(),maintH:a[11],
+        perm:{flow:a[0]!=='OFFLINE',press:a[7]<2.9,temp:a[5]<70,oil:a[0]!=='FAULT'}
+      };
+    });
+  }
+
+  let copChart=null,energyChart=null,loadChart=null,fpTrend=null;
+  const axis={axisLine:{lineStyle:{color:'#284355'}},axisTick:{show:false},axisLabel:{color:'#708594',fontSize:13},splitLine:{lineStyle:{color:'rgba(168,186,200,.08)'}}};
+
+  const app=Vue.createApp({
+    data(){
+      return{
+        clock:'--:--:--',date:'----/--/--',
+        scene:'steady',
+        scenes:[{id:'steady',label:'平稳'},{id:'high',label:'高负荷'},{id:'fault',label:'故障'},{id:'recover',label:'恢复'}],
+        conn:{status:'online',text:'MQTT 演示模式'},
+        // —— 单一数据源 ——
+        state:{
+          source:{supplyT:0,returnT:0},
+          load:{supplyT:0,returnT:0},
+          kpi:{cop:0,heat:0,power:0,kwh:0},
+          units:[],
+          alarms:[]
+        },
+        fp:null,
+        flowing:true
+      };
+    },
+    computed:{
+      sceneLabel(){return SCENES[this.scene].label;},
+      runningUnits(){return this.state.units.filter(u=>u.state==='RUNNING').length;},
+      activeAlarms(){return this.state.alarms.filter(a=>!a.ack).length;},
+      compAnim(){return this.runningUnits>0?'spin':'';},
+      pumpAnim(){return this.runningUnits>0?'spin':'';}
+    },
+    methods:{
+      stateColor,stateText,
+      tick(){try{const d=new Date();this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});this.date=d.toLocaleDateString('zh-CN');}catch(e){}},
+      // 深合并补丁进 state —— MQTT 接入的统一入口
+      applyState(patch){
+        try{
+          const merge=(t,s)=>{for(const k in s){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])){if(!t[k])t[k]={};merge(t[k],s[k]);}else{t[k]=s[k];}}};
+          merge(this.state,patch);
+        }catch(e){console.error(e);}
+      },
+      loadScene(){
+        try{
+          const s=SCENES[this.scene];
+          this.applyState({source:{...s.source},load:{...s.load},kpi:{...s.kpi}});
+          this.state.units=buildUnits(s.units);
+          this.state.alarms=s.alarms;
+          this.flowing=this.runningUnits>0;
+          if(this.fp){const u=this.state.units.find(x=>x.id===this.fp.id);if(u){this.fp=u;this.renderFpTrend();}}
+          this.renderCharts();
+        }catch(e){console.error(e);}
+      },
+      switchScene(id){if(SCENES[id]){this.scene=id;this.loadScene();}},
+      openFp(id){
+        const u=this.state.units.find(x=>x.id===id);if(!u)return;
+        this.fp=u;
+        this.$nextTick(()=>{try{fpTrend=safeInit('fpTrend');this.renderFpTrend();}catch(e){}});
+      },
+      closeFp(){try{if(fpTrend){fpTrend.dispose();fpTrend=null;}}catch(e){}this.fp=null;},
+      renderFpTrend(){
+        if(!fpTrend||!this.fp)return;
+        const base=parseFloat(this.fp.cop)||0;
+        const data=[0,1,2,3,4,5].map(i=>+(base+Math.sin(i*1.1)*0.12).toFixed(2));
+        try{
+          fpTrend.setOption({
+            grid:{left:36,right:12,top:10,bottom:20},
+            xAxis:{type:'category',data:['-5','-4','-3','-2','-1','现在'],...axis,axisLabel:{color:'#708594',fontSize:11}},
+            yAxis:{type:'value',scale:true,...axis,axisLabel:{color:'#708594',fontSize:11}},
+            series:[{type:'line',data,smooth:true,symbolSize:4,lineStyle:{color:'#36c2ff',width:2.5},areaStyle:{color:'rgba(54,194,255,.12)'}}]
+          });
+        }catch(e){console.error(e);}
+      },
+      renderCharts(){
+        const s=SCENES[this.scene];const hours=['00','03','06','09','12','15','18','21'];
+        try{
+          if(copChart){
+            const b=s.kpi.cop;const shape=[-.1,-.05,.05,.1,.05,0,-.05,.08];
+            copChart.setOption({
+              tooltip:{trigger:'axis',backgroundColor:'rgba(8,18,28,.92)',borderColor:'#20394a',textStyle:{color:'#f2f7fa'}},
+              grid:{left:40,right:16,top:22,bottom:26},
+              xAxis:{type:'category',data:hours,...axis},
+              yAxis:{type:'value',min:2.5,max:5,...axis},
+              series:[
+                {name:'系统COP',type:'line',data:shape.map(d=>+(b+d).toFixed(2)),smooth:true,symbolSize:5,lineStyle:{color:'#36c2ff',width:3},areaStyle:{color:'rgba(54,194,255,.12)'}},
+                {name:'目标',type:'line',data:hours.map(()=>4.0),symbol:'none',lineStyle:{color:'#35d07f',type:'dashed',width:1.5}}
+              ]
+            });
+          }
+          if(energyChart){
+            const h=s.kpi.heat,p=s.kpi.power;
+            const hw=[.5,.42,.7,1,.92,.85,.95,.7].map(k=>Math.round(h*k));
+            const pw=[.52,.45,.72,1,.95,.88,.98,.73].map(k=>Math.round(p*k));
+            energyChart.setOption({
+              tooltip:{trigger:'axis',backgroundColor:'rgba(8,18,28,.92)',borderColor:'#20394a',textStyle:{color:'#f2f7fa'}},
+              legend:{data:['制热量','耗电功率'],textStyle:{color:'#a8bac8',fontSize:12},right:12,top:4},
+              grid:{left:52,right:16,top:34,bottom:26},
+              xAxis:{type:'category',data:hours,...axis},
+              yAxis:{type:'value',...axis},
+              series:[
+                {name:'制热量',type:'line',data:hw,smooth:true,symbol:'none',lineStyle:{color:'#ff8a5c',width:3},areaStyle:{color:'rgba(255,138,92,.10)'}},
+                {name:'耗电功率',type:'line',data:pw,smooth:true,symbol:'none',lineStyle:{color:'#36c2ff',width:2.5}}
+              ]
+            });
+          }
+          if(loadChart){
+            const u=this.state.units;
+            loadChart.setOption({
+              tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'rgba(8,18,28,.92)',borderColor:'#20394a',textStyle:{color:'#f2f7fa'}},
+              grid:{left:60,right:20,top:16,bottom:24},
+              xAxis:{type:'value',max:100,...axis,axisLabel:{color:'#708594',fontSize:12,formatter:'{value}%'}},
+              yAxis:{type:'category',data:u.map(x=>x.id),...axis},
+              series:[{type:'bar',data:u.map(x=>({value:x.load,itemStyle:{color:stateColor(x.state),borderRadius:[0,4,4,0]}})),barWidth:14,label:{show:true,position:'right',color:'#a8bac8',fontSize:12,formatter:'{c}%'}}]
+            });
+          }
+        }catch(e){console.error(e);}
+      }
+    },
+    mounted(){
+      this.tick();setInterval(()=>{try{this.tick();}catch(e){}},1000);
+      this.$nextTick(()=>{
+        copChart=safeInit('copChart');energyChart=safeInit('energyChart');loadChart=safeInit('loadChart');
+        this.loadScene();
+      });
+      const order=['steady','high','fault','recover'];let idx=0;
+      setInterval(()=>{try{idx=(idx+1)%order.length;this.switchScene(order[idx]);}catch(e){}},12000);
+
+      // ========== MQTT 接入占位 ==========
+      // 后续接 MQTT 时：订阅主题后把 payload 解析成与 state 同构的补丁对象，
+      // 调用 vm.applyState(patch)。画面自动刷新，无需改渲染。
+      // 示例：
+      //   client.on('message',(topic,msg)=>vm.onMqttMessage(topic,JSON.parse(msg.toString())));
+      const vm=this;
+      window.hpStation={
+        applyState:(p)=>vm.applyState(p),
+        onMqttMessage:(topic,payload)=>vm.onMqttMessage(topic,payload),
+        setConn:(ok)=>{vm.conn=ok?{status:'online',text:'MQTT 已连接'}:{status:'offline',text:'MQTT 断开'};}
+      };
+    }
+  });
+  // 在实例上补一个 onMqttMessage，方便外部调用
+  const vm=app.mount('#app');
+  vm.onMqttMessage=function(topic,payload){
+    try{
+      // 约定：payload 已是与 state 同构的对象，或在此按 topic 做映射。
+      // 例如 topic 'hp/HP-02/cop' -> 定位 units 中 HP-02 更新 cop。
+      if(payload&&typeof payload==='object'){
+        if(Array.isArray(payload.units)||payload.source||payload.load||payload.kpi||payload.alarms){
+          this.applyState(payload);
+          this.renderCharts();
+        }
+      }
+    }catch(e){console.error(e);}
+  };
+
+  function fit(){try{const el=$id('screen');if(!el)return;const scale=Math.min(innerWidth/1920,innerHeight/1080);el.style.transform=`translate(-50%,-50%) scale(${scale})`;}catch(e){}}
+  fit();
+  addEventListener('resize',()=>{try{fit();[copChart,energyChart,loadChart,fpTrend].forEach(c=>{try{if(c)c.resize();}catch(e){}});}catch(e){}});
+})();
+</script>
+</body>
+</html>

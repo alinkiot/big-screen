@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>换热站监控系统</title>
+<script src="../../../../industrial/vendor/vue.global.prod.js"></script>
+<script src="../../../../industrial/vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#050c16;color:#cfe8f5;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+:root{
+  --bg:#0a1626;--bg2:#0c1b30;--panel:rgba(14,32,54,.55);
+  --cyan:#2bc4e8;--cyan-d:#1a7fa8;--cyan-soft:rgba(43,196,232,.16);
+  --pink:#ff2d6b;--pink-d:#b01f4c;
+  --line:#1c3a5a;--line2:#2a5a7a;--txt:#bfe0f0;--txt2:#6f93ad;--txt3:#4a6b80;
+  --num:#36d0f0;
+}
+.num{font-family:"Bahnschrift",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+[v-cloak]{display:none}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center;overflow:hidden;
+  background:
+    linear-gradient(0deg,rgba(8,18,32,.6),rgba(8,18,32,.6)),
+    repeating-linear-gradient(0deg,rgba(43,196,232,.035) 0,rgba(43,196,232,.035) 1px,transparent 1px,transparent 40px),
+    repeating-linear-gradient(90deg,rgba(43,196,232,.035) 0,rgba(43,196,232,.035) 1px,transparent 1px,transparent 40px),
+    radial-gradient(circle at 50% 0%,#12263f,#071020 70%);
+  font-size:13px}
+
+/* 外发光切角面板 */
+.tech{position:relative;display:flex;flex-direction:column;overflow:hidden;background:var(--panel);border:1px solid var(--line);
+  box-shadow:inset 0 0 18px rgba(43,196,232,.06)}
+.tech::before,.tech::after{content:'';position:absolute;width:12px;height:12px;border:2px solid var(--cyan)}
+.tech::before{left:-1px;top:-1px;border-right:none;border-bottom:none}
+.tech::after{right:-1px;bottom:-1px;border-left:none;border-top:none}
+.ptitle{flex:none;display:flex;align-items:center;gap:8px;height:26px;padding:0 6px;font-size:14px;color:#dff2fb;
+  background:linear-gradient(90deg,var(--cyan-soft),transparent)}
+.ptitle::before{content:'';width:6px;height:14px;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.hatch{flex:1;height:8px;background:repeating-linear-gradient(45deg,var(--cyan) 0,var(--cyan) 2px,transparent 2px,transparent 6px);opacity:.5}
+.hatch.pink{background:repeating-linear-gradient(45deg,var(--pink) 0,var(--pink) 2px,transparent 2px,transparent 6px)}
+
+/* ===== 顶部标题 ===== */
+.header{position:absolute;top:0;left:0;width:1920px;height:70px}
+.htitle{position:absolute;left:50%;top:4px;transform:translateX(-50%);font-size:30px;font-weight:800;letter-spacing:6px;
+  color:var(--pink);text-shadow:0 0 14px rgba(255,45,107,.65)}
+.hcut{position:absolute;top:0;height:46px;border:2px solid var(--cyan);opacity:.55}
+.hcut.l{left:620px;width:120px;clip-path:polygon(16px 0,100% 0,100% 100%,0 100%)}
+.hcut.r{right:620px;width:120px;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 100%,0 100%)}
+
+/* ===== 左栏 ===== */
+.left{position:absolute;left:24px;top:78px;width:410px;height:980px;display:grid;grid-template-rows:112px 168px 176px 174px 282px;gap:14px}
+.clockrow{display:flex;align-items:center;gap:10px;padding:10px}
+.clockrow .bar{width:18px;height:40px;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.clockrow .t{font-size:30px;color:#eafaff;font-weight:700}
+.clockrow .d{margin-left:auto;padding:6px 10px;color:var(--txt2);font-size:14px;background:rgba(43,196,232,.08);border:1px solid var(--line)}
+.chart{width:100%;height:100%}
+.pbody{flex:1;min-height:0;padding:8px 10px}
+/* 能耗排名进度条 */
+.rank{display:flex;flex-direction:column;justify-content:space-between;height:100%;gap:4px}
+.rankhdr{display:flex;gap:26px;color:var(--txt2);font-size:13px}
+.rankhdr b{color:var(--cyan)}
+.prog{display:flex;align-items:center;gap:10px}
+.prog .v{width:92px;color:var(--pink);font-size:16px;font-weight:700;white-space:nowrap}
+.prog .track{flex:1;height:12px;background:rgba(43,196,232,.1);border:1px solid var(--line);position:relative;overflow:hidden}
+.prog .fill{height:100%;background:linear-gradient(90deg,var(--pink-d),var(--pink));box-shadow:0 0 8px rgba(255,45,107,.5)}
+.prog .fill.hatch2{background:repeating-linear-gradient(45deg,var(--pink) 0,var(--pink) 3px,transparent 3px,transparent 7px)}
+
+/* ===== 右上设备控制区 ===== */
+.devbar{position:absolute;left:452px;top:78px;width:1444px;height:118px;display:grid;grid-template-columns:120px repeat(4,1fr) 180px;gap:12px}
+.mode{display:grid;grid-template-rows:1fr 1fr;gap:10px}
+.mbtn{display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;color:#dff2fb;border:1px solid var(--cyan);background:rgba(43,196,232,.08);cursor:pointer;position:relative}
+.mbtn.active{background:var(--cyan-soft);box-shadow:0 0 12px rgba(43,196,232,.4) inset}
+.mbtn .tab{position:absolute;left:0;top:50%;transform:translateY(-50%);width:5px;height:60%;background:var(--pink)}
+.dev{padding:6px 10px;display:flex;flex-direction:column}
+.dev .dname{text-align:center;font-size:16px;color:#dff2fb;margin:6px 0 8px}
+.dev .ops{display:flex;gap:10px;justify-content:center}
+.opbtn{width:52px;padding:4px 0;text-align:center;font-size:14px;color:var(--txt);border:1px solid var(--line);background:rgba(43,196,232,.06);cursor:pointer}
+.opbtn .led{display:block;height:3px;margin-top:4px;background:var(--txt3)}
+.opbtn.on{color:#eafaff;border-color:var(--cyan)}
+.opbtn.on .led{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.faults{display:grid;grid-template-rows:1fr 1fr;gap:10px}
+.fault{display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid var(--pink);color:var(--pink);background:rgba(255,45,107,.08);text-shadow:0 0 8px rgba(255,45,107,.5)}
+.fault.ok{border-color:var(--line);color:var(--txt3);background:rgba(43,196,232,.04);text-shadow:none}
+.fault.active{animation:pink 1.4s ease-in-out infinite}
+@keyframes pink{0%,100%{box-shadow:0 0 12px rgba(255,45,107,.6) inset}50%{box-shadow:none}}
+
+/* ===== 中央 P&ID ===== */
+.pid{position:absolute;left:452px;top:208px;width:1444px;height:850px}
+.pid svg{width:100%;height:100%}
+.tagbox{font-size:0}
+
+/* 测点标签（斜纹条 + 名 + 值 + 单位）用 SVG foreignObject 太重，改用 HTML 绝对定位叠加 */
+.labels{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.lab{position:absolute;display:flex;flex-direction:column;gap:2px;font-size:13px;white-space:nowrap;
+  padding:3px 7px;background:rgba(7,16,28,.82);border:1px solid rgba(43,196,232,.22);border-radius:3px;
+  transform:translateY(-50%)}
+.lab .row{display:flex;align-items:center;gap:6px}
+.lab .hb{width:30px;height:7px;background:repeating-linear-gradient(45deg,var(--cyan) 0,var(--cyan) 2px,transparent 2px,transparent 5px);opacity:.7}
+.lab .hb.pink{background:repeating-linear-gradient(45deg,var(--pink) 0,var(--pink) 2px,transparent 2px,transparent 5px)}
+.lab .nm{color:#dbeef8}
+.lab .v{color:var(--num);font-weight:700}
+.lab .u{color:var(--txt2);font-size:11px}
+
+/* 底栏 */
+.foot{position:absolute;left:24px;bottom:4px;width:1872px;height:20px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--txt3)}
+.foot .q{color:var(--cyan)}
+
+/* Faceplate */
+.mask{position:absolute;inset:0;background:rgba(5,12,22,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+.fp{width:360px;background:#0c1d33;border:1px solid var(--cyan);box-shadow:0 0 30px rgba(43,196,232,.25)}
+.fp-h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(90deg,var(--cyan-soft),transparent);border-bottom:1px solid var(--line)}
+.fp-h b{font-size:16px;color:#eafaff}
+.fp-h .x{cursor:pointer;color:var(--txt2);background:none;border:none;font-size:16px}
+.fp-s{padding:12px 14px;border-bottom:1px solid var(--line)}
+.fp-s h5{margin:0 0 8px;font-size:12px;color:var(--txt2);font-weight:600}
+.fp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fp-grid .it{padding:7px 9px;background:rgba(43,196,232,.06);border:1px solid var(--line)}
+.fp-grid .it label{display:block;font-size:11px;color:var(--txt2)}
+.fp-grid .it b{display:block;margin-top:3px;font-size:17px;color:var(--num)}
+.fp-ctrl{display:flex;gap:10px}
+.fp-ctrl button{flex:1;padding:8px 0;font-size:14px;cursor:pointer;border:1px solid var(--cyan);background:rgba(43,196,232,.1);color:#eafaff}
+.fp-ctrl button.stop{border-color:var(--pink);color:var(--pink);background:rgba(255,45,107,.08)}
+.sbo{padding:10px 14px;background:rgba(255,45,107,.08);border-top:1px solid var(--pink)}
+.sbo p{margin:0 0 8px;font-size:13px;color:#ffd0dd}
+.sbo .b2{display:flex;gap:10px}
+.sbo button{flex:1;padding:7px 0;cursor:pointer;border:1px solid var(--line);background:rgba(43,196,232,.08);color:var(--txt)}
+.sbo button.yes{border-color:var(--pink);color:#fff;background:var(--pink-d)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.flow{stroke-dasharray:8 8;animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-32}}
+.spin{transform-origin:0 0;animation:spin 2.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak><div id="screen">
+
+  <!-- ===== 顶部标题 ===== -->
+  <div class="header">
+    <div class="hcut l"></div>
+    <div class="htitle">换热站监控系统</div>
+    <div class="hcut r"></div>
+  </div>
+
+  <!-- ===== 左栏 ===== -->
+  <div class="left">
+    <!-- 时钟 -->
+    <div class="tech clockrow">
+      <div class="bar"></div>
+      <div class="t num">{{clock}}</div>
+      <div class="d num">{{date}}</div>
+    </div>
+    <!-- 历史曲线 -->
+    <div class="tech">
+      <div class="ptitle">历史曲线<div class="hatch"></div></div>
+      <div class="pbody"><div id="histChart" class="chart"></div></div>
+    </div>
+    <!-- 能耗排名 -->
+    <div class="tech">
+      <div class="ptitle">能耗排名<div class="hatch"></div></div>
+      <div class="pbody rank">
+        <div class="rankhdr"><b>耗水</b><b>耗电</b><b>耗能</b></div>
+        <div class="prog"><div class="v num">{{state.energy.water}} m³</div><div class="track"><div class="fill" :style="{width:pct(state.energy.water,120)+'%'}"></div></div></div>
+        <div class="prog"><div class="v num">{{state.energy.power}} KW/h</div><div class="track"><div class="fill" :style="{width:pct(state.energy.power,120)+'%'}"></div></div></div>
+        <div class="prog"><div class="v num">{{state.energy.heat}} m³</div><div class="track"><div class="fill hatch2" :style="{width:pct(state.energy.heat,120)+'%'}"></div></div></div>
+      </div>
+    </div>
+    <!-- 故障统计柱状图 -->
+    <div class="tech">
+      <div class="ptitle">故障统计<div class="hatch pink"></div></div>
+      <div class="pbody"><div id="barChart" class="chart"></div></div>
+    </div>
+    <!-- 数据报表 -->
+    <div class="tech">
+      <div class="ptitle">数据报表<div class="hatch"></div></div>
+      <div class="pbody"><div id="reportChart" class="chart"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== 设备控制区 ===== -->
+  <div class="devbar">
+    <div class="mode">
+      <div class="mbtn" :class="{active:mode==='AUTO'}" @click="mode='AUTO'"><span class="tab"></span>自动</div>
+      <div class="mbtn" :class="{active:mode==='MANUAL'}" @click="mode='MANUAL'"><span class="tab"></span>手动</div>
+    </div>
+    <div class="tech dev" v-for="p in state.pumps" :key="p.id">
+      <div class="dname">{{p.name}}</div>
+      <div class="ops">
+        <div class="opbtn" :class="{on:p.run}" @click="openFp(p.id)">开<span class="led"></span></div>
+        <div class="opbtn" :class="{on:!p.run}" @click="openFp(p.id)">关<span class="led"></span></div>
+      </div>
+    </div>
+    <div class="faults">
+      <div class="fault" :class="{ok:!state.faults.vfdCirc,active:state.faults.vfdCirc}">循环变频故障</div>
+      <div class="fault" :class="{ok:!state.faults.vfdMakeup,active:state.faults.vfdMakeup}">补水变频故障</div>
+    </div>
+  </div>
+
+  <!-- ===== 中央 P&ID ===== -->
+  <div class="pid">
+    <svg viewBox="0 0 1444 850" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <!-- FUXA 换热器图元（currentColor 着色） -->
+        <symbol id="fx-exchanger-heat" viewBox="0 0 24 24">
+          <g transform="matrix(.30011 0 0 .39281 1.4963 3.9441)" fill="none" stroke="currentColor" stroke-width="3.2227">
+            <rect width="70" height="40"/><path d="m70 0-70 40" stroke-miterlimit="10"/>
+          </g>
+        </symbol>
+        <!-- 旋转叶轮泵 -->
+        <symbol id="imp" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M12 12V3.5M12 12l7.4 4.2M12 12l-7.4 4.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+        </symbol>
+      </defs>
+
+      <!-- ===== 管道底层（深青） ===== -->
+      <g fill="none" stroke="#17405f" stroke-width="9" stroke-linecap="round">
+        <!-- 顶部供水干管 -->
+        <path d="M30 70 H1420"/>
+        <!-- 顶部回水干管 -->
+        <path d="M30 150 H700 M770 150 H1120"/>
+        <!-- 左侧竖管下行 -->
+        <path d="M60 70 V470 M60 470 H300"/>
+        <!-- 1线换热器进出 -->
+        <path d="M330 150 V260 M560 150 V260 M560 230 H900"/>
+        <!-- 中部到2线 -->
+        <path d="M330 260 V560 M560 410 V560 M560 560 H980"/>
+        <!-- 右侧回水汇流 -->
+        <path d="M1120 150 V560 M1120 380 H1400 M1400 70 V560"/>
+        <!-- 底部补水/自来水/自流井/水箱/集水坑 -->
+        <path d="M60 470 V760 M60 760 H760 M420 760 V560"/>
+        <path d="M760 760 V620 M760 620 H1120"/>
+        <path d="M1120 560 V900 M1120 900 H1400 M1400 560 V900"/>
+        <path d="M900 900 H1120 M900 760 V900"/>
+      </g>
+
+      <!-- ===== 青蓝流动层 ===== -->
+      <g fill="none" stroke="#2bc4e8" stroke-width="3" stroke-linecap="round" style="filter:drop-shadow(0 0 3px rgba(43,196,232,.7))">
+        <path class="flow" d="M30 70 H1420"/>
+        <path class="flow" d="M770 150 H1120"/>
+        <path class="flow" d="M560 230 H900"/>
+        <path class="flow" d="M560 560 H980"/>
+        <path class="flow" d="M60 760 H760"/>
+        <path class="flow" d="M1120 900 H1400"/>
+        <path class="flow" d="M60 70 V470"/>
+        <path class="flow" d="M1400 70 V560"/>
+        <path class="flow" d="M1120 150 V560"/>
+      </g>
+
+      <!-- ===== 换热器（1线/2线，立体板片） ===== -->
+      <g>
+        <rect x="770" y="190" width="70" height="200" rx="3" fill="#0e2744" stroke="#2bc4e8" stroke-width="1.5"/>
+        <g v-for="n in 7" :key="'h1'+n"><line :x1="780" :x2="830" :y1="205+n*22" :y2="205+n*22" stroke="#2bc4e8" stroke-width="2" opacity=".5"/></g>
+        <text x="760" y="345" text-anchor="end" fill="#bfe0f0" font-size="15">1线换热器</text>
+      </g>
+      <g>
+        <rect x="770" y="470" width="70" height="120" rx="3" fill="#0e2744" stroke="#2bc4e8" stroke-width="1.5"/>
+        <g v-for="n in 4" :key="'h2'+n"><line :x1="780" :x2="830" :y1="488+n*22" :y2="488+n*22" stroke="#2bc4e8" stroke-width="2" opacity=".5"/></g>
+        <text x="760" y="545" text-anchor="end" fill="#bfe0f0" font-size="15">2线换热器</text>
+      </g>
+
+      <!-- ===== 泵（循环泵/补水泵/深井泵/排水泵），旋转叶轮 ===== -->
+      <g v-for="pm in pidPumps" :key="pm.id" :transform="'translate('+pm.x+' '+pm.y+')'">
+        <circle r="24" fill="#0e2744" stroke="#2bc4e8" stroke-width="1.5"/>
+        <use href="#imp" x="-18" y="-18" width="36" height="36" :class="pm.run?'spin':''" :style="{color:pm.run?'#2bc4e8':'#4a6b80'}"/>
+        <text y="40" text-anchor="middle" fill="#6f93ad" font-size="12">{{pm.short}}</text>
+      </g>
+
+      <!-- ===== 圆形读数气泡（带彩环） ===== -->
+      <g v-for="g in gauges" :key="g.id" :transform="'translate('+g.x+' '+g.y+')'">
+        <circle r="18" fill="#0a1a2e" stroke="#163a58" stroke-width="3"/>
+        <circle r="18" fill="none" :stroke="g.c" stroke-width="3" stroke-linecap="round"
+          :stroke-dasharray="113" :stroke-dashoffset="113-113*g.v/100" transform="rotate(-90)"/>
+        <text y="5" text-anchor="middle" :fill="g.c" font-size="14" class="num">{{g.t}}</text>
+      </g>
+
+      <!-- ===== 水箱 ===== -->
+      <g>
+        <rect x="855" y="760" width="110" height="130" rx="4" fill="#0e2744" stroke="#2bc4e8" stroke-width="1.5"/>
+        <rect x="862" :y="760+130-(130*state.tank.level/100)" width="96" :height="130*state.tank.level/100" fill="#1a6f96" opacity=".6"/>
+        <line x1="855" x2="965" y1="790" y2="790" stroke="#2bc4e8" stroke-width="1" opacity=".4"/>
+        <text x="910" y="915" text-anchor="middle" fill="#bfe0f0" font-size="14">水箱</text>
+      </g>
+
+      <!-- ===== 自流井 ===== -->
+      <g>
+        <path d="M470 720 h110 v100 l-20 60 h-70 l-20 -60 z" fill="#0e2744" stroke="#2bc4e8" stroke-width="1.5"/>
+        <line x1="478" x2="572" y1="760" y2="760" stroke="#2bc4e8" stroke-width="1" opacity=".4"/>
+        <text x="525" y="700" text-anchor="middle" fill="#bfe0f0" font-size="14">自流井</text>
+      </g>
+
+      <!-- ===== 集水坑/排水池 ===== -->
+      <g>
+        <rect x="1160" y="830" width="230" height="56" rx="3" fill="#0e2744" stroke="#2bc4e8" stroke-width="1.5"/>
+        <g v-for="n in 4" :key="'cp'+n"><line :x1="1160" :x2="1390" :y1="830+n*11" :y2="830+n*11" stroke="#2bc4e8" stroke-width="1" opacity=".35"/></g>
+      </g>
+
+      <!-- 自来水标注 -->
+      <text x="60" y="750" fill="#bfe0f0" font-size="14">自来水</text>
+      <text x="1410" y="895" text-anchor="end" fill="#bfe0f0" font-size="13">排水泵</text>
+    </svg>
+
+    <!-- ===== 测点标签叠加层（HTML 绝对定位，坐标相对 1444×850 等比换算到容器） ===== -->
+    <div class="labels">
+      <div class="lab" v-for="t in tags" :key="t.id" :style="labStyle(t)">
+        <div class="row" v-for="(r,i) in t.rows" :key="i">
+          <span class="hb" :class="{pink:r.pink}"></span>
+          <span class="nm">{{r.n}}</span><span class="v num">{{r.v}}</span><span class="u">{{r.u}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 底栏 ===== -->
+  <div class="foot">
+    <div>● 换热站监控系统在线 · 补水泵×2 循环泵×2 深井泵 排水泵 · 运行模式：{{mode==='AUTO'?'自动':'手动'}}</div>
+    <div>数据接入：MQTT / OPC UA · 采样 2s</div>
+    <div><span class="q">数据质量 GOOD</span> · 更新时间 {{clock}} · 演示数据</div>
+  </div>
+
+  <!-- ===== Faceplate + SBO ===== -->
+  <div class="mask" v-if="fp" @click.self="closeFp">
+    <div class="fp">
+      <div class="fp-h"><b>{{fp.id}} · {{fp.name}}</b><button class="x" @click="closeFp">✕</button></div>
+      <div class="fp-s">
+        <h5>状态监控</h5>
+        <div class="fp-grid">
+          <div class="it"><label>运行状态</label><b :style="{color:fp.run?'#2bc4e8':'#ff2d6b'}">{{fp.run?'运行中':'停止'}}</b></div>
+          <div class="it"><label>控制模式</label><b>{{mode==='AUTO'?'自动':'手动'}}</b></div>
+          <div class="it"><label>运行频率</label><b class="num">{{fp.hz}} Hz</b></div>
+          <div class="it"><label>瞬时流量</label><b class="num">{{fp.flow}}</b></div>
+        </div>
+      </div>
+      <div class="fp-s" v-if="mode==='MANUAL' && !sbo">
+        <h5>手动操作（SBO 两步确认）</h5>
+        <div class="fp-ctrl">
+          <button @click="askSbo('start')" :disabled="fp.run">启动</button>
+          <button class="stop" @click="askSbo('stop')" :disabled="!fp.run">停止</button>
+        </div>
+      </div>
+      <div class="fp-s" v-if="mode==='AUTO'"><h5>自动模式下就地操作闭锁，切换手动方可操作</h5></div>
+      <div class="sbo" v-if="sbo">
+        <p>确认对 <b>{{fp.name}}</b> 执行「{{sbo==='start'?'启动':'停止'}}」？该指令将下发至 PLC。</p>
+        <div class="b2"><button @click="sbo=null">取消</button><button class="yes" @click="confirmSbo">确认下发</button></div>
+      </div>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+(function(){
+  'use strict';
+  const $id=(id)=>document.getElementById(id);
+  const safeInit=(id)=>{try{const el=$id(id);if(!el)return null;return echarts.init(el);}catch(e){console.error(e);return null;}};
+
+  // 单一数据源
+  const STATE={
+    energy:{water:68.2,power:63.3,heat:66.1},
+    tank:{level:81},
+    faults:{vfdCirc:true,vfdMakeup:false},
+    pumps:[
+      {id:'MP-1',name:'NO.1补水泵',run:true},
+      {id:'MP-2',name:'NO.2补水泵',run:true},
+      {id:'CP-1',name:'NO.1循环泵',run:true},
+      {id:'CP-2',name:'NO.2循环泵',run:false}
+    ]
+  };
+
+  let histChart=null,barChart=null,reportChart=null;
+
+  const app=Vue.createApp({
+    data(){return{
+      clock:'--:--:--',date:'----年--月--日',
+      mode:'AUTO',
+      state:JSON.parse(JSON.stringify(STATE)),
+      fp:null,sbo:null,
+      // P&ID 泵位置
+      pidPumps:[
+        {id:'CP-1',label:'NO.1循环泵',short:'',x:990,y:360,run:true},
+        {id:'CP-2',label:'NO.2循环泵',short:'',x:990,y:600,run:false},
+        {id:'MP-1',label:'NO.1补水泵',short:'',x:1120,y:700,run:true},
+        {id:'MP-2',label:'NO.2补水泵',short:'',x:1120,y:830,run:true},
+        {id:'DP-1',label:'深井泵',short:'深井泵',x:650,y:905,run:true},
+        {id:'WP-1',label:'排水泵',short:'排水泵',x:1400,y:905,run:false}
+      ],
+      // 圆形读数气泡
+      gauges:[
+        {id:'g1',x:705,y:250,v:62,t:'62',c:'#2bc4e8'},
+        {id:'g2',x:758,y:258,v:65,t:'65',c:'#35d07f'},
+        {id:'g3',x:915,y:272,v:63,t:'63',c:'#2bc4e8'},
+        {id:'g4',x:930,y:245,v:90,t:'90',c:'#35d07f'},
+        {id:'g5',x:865,y:455,v:64,t:'64',c:'#2bc4e8'},
+        {id:'g6',x:1085,y:435,v:64,t:'64',c:'#2bc4e8'},
+        {id:'g7',x:1240,y:350,v:54,t:'54',c:'#2bc4e8'},
+        {id:'g8',x:1345,y:345,v:66,t:'66',c:'#ffb547'},
+        {id:'g9',x:530,y:555,v:53,t:'53',c:'#2bc4e8'},
+        {id:'g10',x:580,y:555,v:66,t:'66',c:'#ffb547'},
+        {id:'g11',x:1235,y:550,v:57,t:'57',c:'#2bc4e8'},
+        {id:'g12',x:1330,y:545,v:54,t:'54',c:'#2bc4e8'}
+      ],
+      // 测点标签（坐标基于 1444×850）
+      tags:[
+        {id:'t1',x:530,y:210,rows:[{n:'瞬时流量',v:'52.7',u:'m³/h'},{n:'瞬时热量',v:'66.2',u:'GJ'}]},
+        {id:'t2',x:870,y:198,rows:[{n:'供水压力',v:'63.1',u:'Mpa'},{n:'供水温度',v:'90.0',u:'℃'}]},
+        {id:'t3',x:462,y:340,rows:[{n:'电磁阀',v:'63.9',u:'%'}]},
+        {id:'t4',x:575,y:312,rows:[{n:'回水压力',v:'61.8',u:'Mpa'},{n:'回水温度',v:'66.2',u:'℃'}]},
+        {id:'t5',x:925,y:402,rows:[{n:'NO.1循环泵频率',v:'32.4',u:'Hz'}]},
+        {id:'t6',x:1030,y:318,rows:[{n:'回水压力',v:'54.3',u:'Mpa'}]},
+        {id:'t7',x:1372,y:345,rows:[{n:'回水温度',v:'66.2',u:'℃'}]},
+        {id:'t8',x:1330,y:402,rows:[{n:'瞬时流量',v:'52.7',u:'m³/h'},{n:'瞬时热量',v:'61.8',u:'GJ'}]},
+        {id:'t9',x:898,y:478,rows:[{n:'供水温度',v:'66.2',u:'℃'}]},
+        {id:'t10',x:455,y:480,rows:[{n:'回水压力',v:'52.8',u:'Mpa'},{n:'回水温度',v:'66.2',u:'℃'}]},
+        {id:'t11',x:925,y:642,rows:[{n:'NO.2循环泵频率',v:'31.4',u:'Hz'}]},
+        {id:'t12',x:1030,y:528,rows:[{n:'回水压力',v:'57.2',u:'Mpa'}]},
+        {id:'t13',x:1372,y:555,rows:[{n:'回水温度',v:'54.3',u:'℃'}]},
+        {id:'t14',x:1200,y:655,rows:[{n:'瞬时流量',v:'52.7',u:'m³/h'},{n:'瞬时热量',v:'51.9',u:'GJ'}]},
+        {id:'t15',x:300,y:648,rows:[{n:'瞬时流量',v:'52.8',u:'m³/h'},{n:'瞬时热量',v:'54.3',u:'GJ'}]},
+        {id:'t16',x:640,y:662,rows:[{n:'电磁阀',v:'0',u:'%'}]},
+        {id:'t17',x:860,y:688,rows:[{n:'NO.1补水泵频率',v:'32.4',u:'Hz'}]},
+        {id:'t18',x:1200,y:600,rows:[{n:'瞬时流量',v:'57.2',u:'m³/h'},{n:'瞬时热量',v:'63.9',u:'GJ'}]},
+        {id:'t19',x:300,y:732,rows:[{n:'瞬时流量',v:'52.8',u:'m³/h'},{n:'瞬时热量',v:'52.7',u:'GJ'}]},
+        {id:'t20',x:955,y:742,rows:[{n:'水箱液位',v:'81',u:''}]},
+        {id:'t21',x:990,y:788,rows:[{n:'NO.2补水泵频率',v:'32.8',u:'Hz'}]},
+        {id:'t22',x:1175,y:805,rows:[{n:'集水坑池液位',v:'63.9',u:'%'}]}
+      ]
+    };},
+    methods:{
+      pct(v,max){return Math.min(100,Math.max(0,v/max*100));},
+      labStyle(t){return{left:(t.x/1444*100)+'%',top:(t.y/850*100)+'%'};},
+      tick(){try{const d=new Date();this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});
+        this.date=d.getFullYear()+'年'+(d.getMonth()+1)+'月-'+d.getDate()+'日';}catch(e){}},
+      applyState(patch){try{const merge=(t,s)=>{for(const k in s){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])){if(!t[k])t[k]={};merge(t[k],s[k]);}else t[k]=s[k];}};merge(this.state,patch);}catch(e){console.error(e);}},
+      openFp(id){const p=this.state.pumps.find(x=>x.id===id)||this.pidPumps.find(x=>x.id===id);if(!p)return;
+        this.fp={id:p.id,name:p.name||p.label,run:p.run,hz:(p.run?(30+Math.random()*4).toFixed(1):'0.0'),flow:(p.run?(50+Math.random()*6).toFixed(1)+' m³/h':'0.0 m³/h')};this.sbo=null;},
+      closeFp(){this.fp=null;this.sbo=null;},
+      askSbo(a){this.sbo=a;},
+      confirmSbo(){try{const act=this.sbo;const sp=this.state.pumps.find(x=>x.id===this.fp.id);
+        if(sp)sp.run=(act==='start');const pp=this.pidPumps.find(x=>x.id===this.fp.id);if(pp)pp.run=(act==='start');
+        this.fp.run=(act==='start');}catch(e){console.error(e);}this.sbo=null;},
+      renderCharts(){
+        const axis={axisLine:{lineStyle:{color:'#1c4a6a'}},axisTick:{show:false},axisLabel:{color:'#6f93ad',fontSize:11},splitLine:{show:false}};
+        try{
+          if(histChart)histChart.setOption({grid:{left:40,right:14,top:14,bottom:38},
+            xAxis:{type:'category',data:['49:35','49:40','49:45'],...axis,
+              name:'12/15/2024 20:49',nameLocation:'middle',nameGap:26,nameTextStyle:{color:'#6f93ad',fontSize:11}},
+            yAxis:{type:'value',...axis},
+            series:[{type:'line',data:[42,55,48,60,52,58,50,64,56],smooth:false,symbol:'none',lineStyle:{color:'#2bc4e8',width:2}}]});
+          if(barChart){const d=[6,7,5,8,6,7,9,6,7,8];
+            barChart.setOption({grid:{left:22,right:10,top:14,bottom:22},
+              xAxis:{type:'category',data:['1','2','3','4','5','6','7','8','9','10'],...axis},
+              yAxis:{type:'value',...axis,show:false},
+              series:[{type:'bar',data:d.map(v=>({value:v})),barWidth:14,
+                itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#7fd8ef'},{offset:.55,color:'#7fd8ef'},{offset:.55,color:'#ff2d6b'},{offset:1,color:'#ff2d6b'}])}}]});}
+          if(reportChart)reportChart.setOption({grid:{left:38,right:14,top:28,bottom:40},
+            legend:{show:false},
+            xAxis:{type:'category',data:['49:35','49:40','49:45'],...axis,
+              name:'2024/12/15 20:49',nameLocation:'middle',nameGap:26,nameTextStyle:{color:'#6f93ad',fontSize:11}},
+            yAxis:{type:'value',...axis},
+            series:[
+              {type:'line',data:[52,48,55,50,58,53,60,54],smooth:true,symbol:'none',lineStyle:{color:'#ff4d6b',width:2}},
+              {type:'line',data:[30,34,32,38,35,40,36,42],smooth:true,symbol:'none',lineStyle:{color:'#2bc4e8',width:2}},
+              {type:'line',data:[28,30,29,33,31,35,32,37],smooth:true,symbol:'none',lineStyle:{color:'#35d07f',width:2}}
+            ]});
+        }catch(e){console.error(e);}
+      }
+    },
+    mounted(){
+      this.tick();setInterval(()=>{try{this.tick();}catch(e){}},1000);
+      this.$nextTick(()=>{histChart=safeInit('histChart');barChart=safeInit('barChart');reportChart=safeInit('reportChart');this.renderCharts();});
+      const vm=this;
+      window.hxStation={applyState:(p)=>vm.applyState(p)};
+    }
+  });
+  const vm=app.mount('#app');
+
+  function fit(){try{const el=$id('screen');if(!el)return;const s=Math.min(innerWidth/1920,innerHeight/1080);el.style.transform=`translate(-50%,-50%) scale(${s})`;}catch(e){}}
+  fit();
+  addEventListener('resize',()=>{try{fit();[histChart,barChart,reportChart].forEach(c=>{try{if(c)c.resize();}catch(e){}});}catch(e){}});
+})();
+</script>
+</body>
+</html>

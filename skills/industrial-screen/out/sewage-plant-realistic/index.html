@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>污水处理厂工艺监控系统</title>
+<script src="../../../../industrial/vendor/vue.global.prod.js"></script>
+<script src="../../../../industrial/vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#050c16;color:#cfe8f5;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+:root{
+  --bg:#0a1626;--panel:rgba(14,32,54,.55);--line:#1c3a5a;--line2:#2a5a7a;
+  --cyan:#2bc4e8;--cyan-soft:rgba(43,196,232,.14);--pink:#ff2d6b;
+  --green:#35d07f;--amber:#ffb547;--txt:#bfe0f0;--txt2:#6f93ad;--txt3:#4a6b80;--num:#36d0f0;
+}
+.num{font-family:"Bahnschrift",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+[v-cloak]{display:none}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center;overflow:hidden;
+  background:linear-gradient(0deg,rgba(8,18,32,.6),rgba(8,18,32,.6)),
+    repeating-linear-gradient(0deg,rgba(43,196,232,.03) 0,rgba(43,196,232,.03) 1px,transparent 1px,transparent 42px),
+    repeating-linear-gradient(90deg,rgba(43,196,232,.03) 0,rgba(43,196,232,.03) 1px,transparent 1px,transparent 42px),
+    radial-gradient(circle at 50% 0%,#12263f,#071020 70%)}
+.tech{position:relative;background:var(--panel);border:1px solid var(--line);box-shadow:inset 0 0 18px rgba(43,196,232,.06)}
+.tech::before,.tech::after{content:'';position:absolute;width:12px;height:12px;border:2px solid var(--cyan)}
+.tech::before{left:-1px;top:-1px;border-right:none;border-bottom:none}
+.tech::after{right:-1px;bottom:-1px;border-left:none;border-top:none}
+.ptitle{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;font-size:14px;color:#dff2fb;background:linear-gradient(90deg,var(--cyan-soft),transparent)}
+.ptitle::before{content:'';width:5px;height:14px;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.hatch{flex:1;height:7px;background:repeating-linear-gradient(45deg,var(--cyan) 0,var(--cyan) 2px,transparent 2px,transparent 6px);opacity:.5}
+
+/* 顶栏 */
+.header{position:absolute;top:0;left:0;width:1920px;height:72px;display:flex;align-items:center;justify-content:center}
+.htitle{font-size:32px;font-weight:800;letter-spacing:8px;color:#eafaff;text-shadow:0 0 16px rgba(43,196,232,.6)}
+.htitle b{color:var(--cyan)}
+.clock{position:absolute;right:26px;top:20px;text-align:right}
+.clock .t{font-size:22px;color:#eafaff}.clock .d{font-size:12px;color:var(--txt2)}
+.hbar{position:absolute;left:26px;top:22px;display:flex;gap:10px}
+.kpi{padding:5px 14px;border:1px solid var(--line);background:rgba(43,196,232,.06)}
+.kpi label{font-size:11px;color:var(--txt2)}.kpi b{display:block;font-size:19px;color:var(--num)}
+
+/* 左右栏 */
+.left{position:absolute;left:24px;top:84px;width:360px;height:972px;display:grid;grid-template-rows:1fr 1fr 1fr;gap:14px}
+.right{position:absolute;right:24px;top:84px;width:360px;height:972px;display:grid;grid-template-rows:1.1fr 1fr 1fr;gap:14px}
+.tech{display:flex;flex-direction:column;overflow:hidden}
+.ptitle{flex:none}
+.pbody{flex:1;min-height:0;padding:10px 12px}
+.chart{width:100%;height:100%}
+.list{display:flex;flex-direction:column;gap:8px;height:100%;overflow:auto}
+.row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);background:rgba(43,196,232,.05)}
+.row i{width:9px;height:9px;border-radius:50%;flex:none}
+.row .n{font-size:13px;color:var(--txt)}
+.row .v{margin-left:auto;font-size:15px;font-weight:700;color:var(--num)}
+.row .u{font-size:11px;color:var(--txt2)}
+.alm{display:flex;align-items:center;gap:9px;padding:7px 10px;border-left:3px solid var(--line);background:rgba(43,196,232,.04)}
+.alm.l1{border-color:var(--pink)}.alm.l2{border-color:var(--amber)}
+.alm .t{font-size:13px}.alm.l1 .t{color:var(--pink)}
+.alm .tm{margin-left:auto;font-size:11px;color:var(--txt3)}
+
+/* 中央工艺区 */
+.flow-area{position:absolute;left:404px;top:84px;width:1112px;height:972px}
+.stage{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px}
+.stage img{display:block;filter:drop-shadow(0 4px 14px rgba(0,0,0,.5))}
+.stage .cap{font-size:13px;color:#dff2fb;white-space:nowrap;background:rgba(7,16,28,.7);padding:2px 8px;border:1px solid var(--line);border-radius:3px}
+.spin-img{animation:spin 3s linear infinite;transform-origin:center}
+.spin-img.stop{animation:none;opacity:.55}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* 测点标签 */
+.tag{position:absolute;font-size:12px;white-space:nowrap;background:rgba(7,16,28,.82);border:1px solid rgba(43,196,232,.25);border-radius:3px;padding:3px 7px;transform:translateY(-50%)}
+.tag .r{display:flex;align-items:center;gap:5px}
+.tag .r .hb{width:22px;height:6px;background:repeating-linear-gradient(45deg,var(--cyan) 0,var(--cyan) 2px,transparent 2px,transparent 5px);opacity:.7}
+.tag .nm{color:#dbeef8}.tag .vv{color:var(--num);font-weight:700}.tag .uu{color:var(--txt2);font-size:10px}
+/* SVG 管道层 */
+.pipes{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.flow{stroke-dasharray:9 10;animation:flowmove 1.6s linear infinite}
+@keyframes flowmove{to{stroke-dashoffset:-38}}
+
+/* 底栏 */
+.foot{position:absolute;left:24px;bottom:4px;width:1872px;height:22px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--txt3)}
+.foot .q{color:var(--green)}
+@media (prefers-reduced-motion:reduce){.spin-img,.flow{animation:none}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak><div id="screen">
+
+  <!-- 顶栏 -->
+  <div class="header"><div class="htitle">污水处理厂 <b>工艺监控系统</b></div></div>
+  <div class="hbar">
+    <div class="kpi"><label>进水流量</label><b class="num">{{state.kpi.inflow}} <span style="font-size:11px">m³/h</span></b></div>
+    <div class="kpi"><label>出水COD</label><b class="num">{{state.kpi.cod}} <span style="font-size:11px">mg/L</span></b></div>
+    <div class="kpi"><label>曝气DO</label><b class="num">{{state.kpi.do}} <span style="font-size:11px">mg/L</span></b></div>
+  </div>
+  <div class="clock"><div class="t num">{{clock}}</div><div class="d num">{{date}}</div></div>
+
+  <!-- 左栏 -->
+  <div class="left">
+    <div class="tech"><div class="ptitle">进水水质趋势<div class="hatch"></div></div><div class="pbody"><div id="c1" class="chart"></div></div></div>
+    <div class="tech"><div class="ptitle">设备运行状态<div class="hatch"></div></div>
+      <div class="pbody list">
+        <div class="row" v-for="d in state.devices" :key="d.id"><i :style="{background:stateColor(d.run)}"></i><span class="n">{{d.name}}</span><span class="v">{{d.run?d.val:'停'}}</span><span class="u">{{d.run?d.unit:''}}</span></div>
+      </div>
+    </div>
+    <div class="tech"><div class="ptitle">能耗曲线<div class="hatch"></div></div><div class="pbody"><div id="c2" class="chart"></div></div></div>
+  </div>
+
+  <!-- 中央工艺 -->
+  <div class="flow-area">
+    <svg class="pipes" viewBox="0 0 1112 972" preserveAspectRatio="none">
+      <g fill="none" stroke="#17405f" stroke-width="10" stroke-linecap="round">
+        <path d="M70 170 H300 M300 170 V260"/>
+        <path d="M300 300 H560 M560 170 V300"/>
+        <path d="M560 300 H840 M840 170 V430"/>
+        <path d="M300 540 H840 M300 430 V540"/>
+        <path d="M840 540 H1040 M1040 300 V680 M840 680 H1040"/>
+        <path d="M300 680 H560 M560 540 V820 M300 820 H1040 M1040 680 V820"/>
+      </g>
+      <g fill="none" stroke="#2bc4e8" stroke-width="3.2" stroke-linecap="round" style="filter:drop-shadow(0 0 3px rgba(43,196,232,.7))">
+        <path class="flow" d="M70 170 H300 M300 170 V260"/>
+        <path class="flow" d="M300 300 H560"/>
+        <path class="flow" d="M560 300 H840"/>
+        <path class="flow" d="M300 540 H840"/>
+        <path class="flow" d="M840 540 H1040"/>
+        <path class="flow" d="M300 820 H1040"/>
+      </g>
+    </svg>
+
+    <!-- 设备（写实位图） · 坐标基于 1112×972，用百分比定位 -->
+    <div class="stage" v-for="s in stages" :key="s.id" :style="stPos(s)">
+      <img :src="s.src" :width="s.w" :height="s.h" :class="s.spin?('spin-img'+(runAll?'':' stop')):''" :alt="s.cap">
+      <div class="cap">{{s.cap}}</div>
+    </div>
+
+    <!-- 测点标签 -->
+    <div class="tag" v-for="t in tags" :key="t.id" :style="tagPos(t)">
+      <div class="r" v-for="(r,i) in t.rows" :key="i"><span class="hb"></span><span class="nm">{{r.n}}</span><span class="vv num">{{r.v}}</span><span class="uu">{{r.u}}</span></div>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="right">
+    <div class="tech"><div class="ptitle">溶解氧 / 曝气量<div class="hatch"></div></div><div class="pbody"><div id="c3" class="chart"></div></div></div>
+    <div class="tech"><div class="ptitle">出水达标分析<div class="hatch"></div></div><div class="pbody"><div id="c4" class="chart"></div></div></div>
+    <div class="tech"><div class="ptitle">报警与事件<div class="hatch"></div></div>
+      <div class="pbody list">
+        <div class="alm" :class="a.cls" v-for="a in state.alarms" :key="a.id"><span class="t">{{a.t}}</span><span class="tm">{{a.tm}}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底栏 -->
+  <div class="foot">
+    <div>● 工艺监控在线 · A²/O 工艺 · 设备 {{state.devices.length}} 台 · 图标素材 iotview</div>
+    <div>数据接入：MQTT / OPC UA · 采样 2s</div>
+    <div><span class="q">数据质量 GOOD</span> · 更新时间 {{clock}} · 演示数据</div>
+  </div>
+
+</div></div>
+
+<script>
+(function(){
+  'use strict';
+  const $id=(id)=>document.getElementById(id);
+  const safeInit=(id)=>{try{const el=$id(id);if(!el)return null;return echarts.init(el);}catch(e){console.error(e);return null;}};
+  const A='../../assets/iotview-icons/';
+  const stateColor=(run)=>run?'#35d07f':'#708594';
+
+  let c1=null,c2=null,c3=null,c4=null;
+  const app=Vue.createApp({
+    data(){return{
+      clock:'--:--:--',date:'----年--月--日',
+      runAll:true,
+      state:{
+        kpi:{inflow:'1285',cod:'28.6',do:'2.3'},
+        devices:[
+          {id:'d1',name:'1#进水泵',run:true,val:'46.2',unit:'Hz'},
+          {id:'d2',name:'2#进水泵',run:false,val:'0',unit:'Hz'},
+          {id:'d3',name:'1#鼓风机',run:true,val:'48.5',unit:'Hz'},
+          {id:'d4',name:'2#鼓风机',run:true,val:'47.0',unit:'Hz'},
+          {id:'d5',name:'回流污泥泵',run:true,val:'38.0',unit:'Hz'},
+          {id:'d6',name:'加药计量泵',run:true,val:'62',unit:'%'}
+        ],
+        alarms:[
+          {id:'a1',cls:'l2',t:'调节池液位偏高 · 4.2m',tm:'09:41'},
+          {id:'a2',cls:'l1',t:'2#进水泵 停机备妥',tm:'08:12'},
+          {id:'a3',cls:'l2',t:'好氧池DO 波动关注',tm:'10:05'}
+        ]
+      },
+      // 写实位图设备。坐标百分比(基于 1112×972)
+      stages:[
+        {id:'s1',src:A+'24/105.png',x:70,y:300,w:150,h:165,cap:'调节池'},
+        {id:'s2',src:A+'38/31.png',x:300,y:300,w:92,h:108,cap:'1#进水泵'},
+        {id:'s3',src:A+'25/80.png',x:560,y:300,w:150,h:78,cap:'换热/沉砂'},
+        {id:'s4',src:A+'19/19.png',x:840,y:300,w:96,h:96,cap:'1#鼓风曝气',spin:true},
+        {id:'s5',src:A+'19/19.png',x:840,y:540,w:96,h:96,cap:'2#鼓风曝气',spin:true},
+        {id:'s6',src:A+'34/31.png',x:1040,y:300,w:92,h:150,cap:'加热单元'},
+        {id:'s7',src:A+'38/31.png',x:300,y:540,w:92,h:108,cap:'回流污泥泵'},
+        {id:'s8',src:A+'26/57.png',x:560,y:540,w:130,h:60,cap:'曝气流量计'},
+        {id:'s9',src:A+'24/105.png',x:300,y:820,w:150,h:165,cap:'二沉池'},
+        {id:'s10',src:A+'25/80.png',x:700,y:820,w:150,h:78,cap:'出水计量'},
+        {id:'s11',src:A+'34/31.png',x:1040,y:680,w:92,h:150,cap:'消毒单元'}
+      ],
+      tags:[
+        {id:'t1',x:170,y:250,rows:[{n:'液位',v:'4.2',u:'m'}]},
+        {id:'t2',x:360,y:250,rows:[{n:'频率',v:'46.2',u:'Hz'},{n:'流量',v:'1285',u:'m³/h'}]},
+        {id:'t3',x:620,y:250,rows:[{n:'浊度',v:'38',u:'NTU'}]},
+        {id:'t4',x:905,y:250,rows:[{n:'DO',v:'2.3',u:'mg/L'}]},
+        {id:'t5',x:905,y:490,rows:[{n:'DO',v:'2.1',u:'mg/L'}]},
+        {id:'t6',x:360,y:490,rows:[{n:'回流比',v:'82',u:'%'}]},
+        {id:'t7',x:620,y:505,rows:[{n:'风量',v:'4200',u:'m³/h'}]},
+        {id:'t8',x:170,y:780,rows:[{n:'泥位',v:'1.8',u:'m'}]},
+        {id:'t9',x:760,y:782,rows:[{n:'COD',v:'28.6',u:'mg/L'},{n:'流量',v:'1180',u:'m³/h'}]}
+      ]
+    };},
+    methods:{
+      stateColor,
+      stPos(s){return{left:(s.x/1112*100)+'%',top:(s.y/972*100)+'%'};},
+      tagPos(t){return{left:(t.x/1112*100)+'%',top:(t.y/972*100)+'%'};},
+      tick(){try{const d=new Date();this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});this.date=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';}catch(e){}},
+      applyState(p){try{const m=(t,s)=>{for(const k in s){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])){if(!t[k])t[k]={};m(t[k],s[k]);}else t[k]=s[k];}};m(this.state,p);}catch(e){console.error(e);}},
+      renderCharts(){
+        const ax={axisLine:{lineStyle:{color:'#1c4a6a'}},axisTick:{show:false},axisLabel:{color:'#6f93ad',fontSize:11},splitLine:{show:false}};
+        const H=['0','4','8','12','16','20'];
+        try{
+          if(c1)c1.setOption({tooltip:{trigger:'axis'},grid:{left:38,right:14,top:16,bottom:24},xAxis:{type:'category',data:H,...ax},yAxis:{type:'value',...ax},series:[{name:'COD',type:'line',data:[220,245,260,238,250,230],smooth:true,symbol:'none',lineStyle:{color:'#2bc4e8',width:2},areaStyle:{color:'rgba(43,196,232,.12)'}}]});
+          if(c2)c2.setOption({tooltip:{trigger:'axis'},grid:{left:40,right:14,top:16,bottom:24},xAxis:{type:'category',data:H,...ax},yAxis:{type:'value',...ax},series:[{type:'bar',data:[320,360,410,520,480,440],barWidth:16,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#2bc4e8'},{offset:1,color:'#1a7fa8'}])}}]});
+          if(c3)c3.setOption({tooltip:{trigger:'axis'},legend:{data:['DO','风量'],textStyle:{color:'#a8bac8',fontSize:11},right:8,top:2},grid:{left:40,right:14,top:30,bottom:24},xAxis:{type:'category',data:H,...ax},yAxis:{type:'value',...ax},series:[{name:'DO',type:'line',data:[2.0,2.2,2.3,2.1,2.4,2.2],smooth:true,symbol:'none',lineStyle:{color:'#35d07f',width:2}},{name:'风量',type:'line',data:[3.8,4.0,4.2,4.5,4.3,4.1],smooth:true,symbol:'none',lineStyle:{color:'#2bc4e8',width:2}}]});
+          if(c4)c4.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:['52%','74%'],center:['50%','54%'],label:{color:'#bfe0f0',fontSize:12},data:[{value:92,name:'达标',itemStyle:{color:'#35d07f'}},{value:6,name:'关注',itemStyle:{color:'#ffb547'}},{value:2,name:'超标',itemStyle:{color:'#ff2d6b'}}]}]});
+        }catch(e){console.error(e);}
+      }
+    },
+    mounted(){
+      this.tick();setInterval(()=>{try{this.tick();}catch(e){}},1000);
+      this.$nextTick(()=>{c1=safeInit('c1');c2=safeInit('c2');c3=safeInit('c3');c4=safeInit('c4');this.renderCharts();});
+      const vm=this;window.sewagePlant={applyState:(p)=>vm.applyState(p)};
+    }
+  });
+  app.mount('#app');
+  function fit(){try{const el=$id('screen');if(!el)return;const s=Math.min(innerWidth/1920,innerHeight/1080);el.style.transform=`translate(-50%,-50%) scale(${s})`;}catch(e){}}
+  fit();addEventListener('resize',()=>{try{fit();[c1,c2,c3,c4].forEach(c=>{try{if(c)c.resize();}catch(e){}});}catch(e){}});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "id": "bridge-monitoring",
+  "out": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/bridge-monitoring",
+  "errors": [],
+  "warnings": [],
+  "screenshots": [
+    "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/bridge-monitoring/bridge-monitoring-1920.png"
+  ],
+  "engine": "/Users/weixingzheng/my_pro/skills/big-screen/vizlab",
+  "build": "Built 11 registered screens + Home (standalone) -> /Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/bridge-monitoring/.build",
+  "html": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/bridge-monitoring/bridge-monitoring.html",
+  "port": 5199,
+  "browser": "/Users/weixingzheng/Library/Caches/ms-playwright/chromium-1223/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+  "audit": {
+    "title": "桥梁智能监测运营中心",
+    "stage": null,
+    "docScroll": [
+      1920,
+      1080
+    ],
+    "canvas": 1,
+    "renderer": "webgl",
+    "drawCalls": "37",
+    "overflow": [],
+    "emptyPanels": 0,
+    "bodyText": 1078
+  },
+  "report": "/Users/weixingzheng/my_pro/skills/big-screen/skills/bigscreen-studio/out/bridge-monitoring/bridge-monitoring-report.json",
+  "generatedAt": "2026-11-01T17:06:52.807Z"
+}
